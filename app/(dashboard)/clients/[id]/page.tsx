@@ -17,10 +17,12 @@ import {
 export default async function ClientDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const client = await getClient(params.id);
-  const projects = await getProjectsByClient(params.id);
+  // Await params (Next.js 15+)
+  const { id } = await params;
+  const client = await getClient(id);
+  const projects = await getProjectsByClient(id);
 
   return (
     <div>
@@ -32,13 +34,13 @@ export default async function ClientDetailPage({
           </p>
         </div>
         <div>
-          <Link href={`/clients/${params.id}/edit`}>
+          <Link href={`/clients/${id}/edit`}>
             <Button variant="outline">
               <Edit />
               Bewerken
             </Button>
           </Link>
-          <Link href={`/projects/new?client_id=${params.id}`}>
+          <Link href={`/projects/new?client_id=${id}`}>
             <Button>
               <Plus />
               Nieuw Project

@@ -5,8 +5,10 @@ import { ProjectForm } from "@/components/project-form";
 export default async function NewProjectPage({
   searchParams,
 }: {
-  searchParams: { client_id?: string };
+  searchParams: Promise<{ client_id?: string }>;
 }) {
+  // Await searchParams (Next.js 15+)
+  const params = await searchParams;
   const clients = await getClients();
 
   return (
@@ -17,7 +19,7 @@ export default async function NewProjectPage({
           Voeg een nieuw project toe aan een klant
         </p>
       </div>
-      <ProjectForm clients={clients} defaultClientId={searchParams.client_id} />
+      <ProjectForm clients={clients} defaultClientId={params.client_id} />
     </div>
   );
 }

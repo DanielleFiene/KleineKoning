@@ -8,9 +8,11 @@ import Link from "next/link";
 export default async function ProjectDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const project = await getProject(params.id);
+  // Await params (Next.js 15+)
+  const { id } = await params;
+  const project = await getProject(id);
 
   return (
     <div>
@@ -21,7 +23,7 @@ export default async function ProjectDetailPage({
             Klant: {(project as any).clients?.name || "-"}
           </p>
         </div>
-        <Link href={`/projects/${params.id}/edit`}>
+        <Link href={`/projects/${id}/edit`}>
           <Button variant="outline">
             <Edit />
             Bewerken

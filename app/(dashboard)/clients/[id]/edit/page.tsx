@@ -5,9 +5,11 @@ import { ClientForm } from "@/components/client-form";
 export default async function EditClientPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const client = await getClient(params.id);
+  // Await params (Next.js 15+)
+  const { id } = await params;
+  const client = await getClient(id);
 
   return (
     <div>
