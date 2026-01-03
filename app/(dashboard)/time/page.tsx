@@ -19,11 +19,11 @@ export default async function TimePage({
   let monday: Date;
   
   if (params.week) {
-    console.log("🔍 [TimePage] DEBUG: week parameter found:", params.week);
+    console.log("[TimePage] DEBUG: week parameter found:", params.week);
     // Parse week parameter without timezone issues
     try {
       const weekDate = parseDateString(params.week);
-      console.log("🔍 [TimePage] DEBUG: parsed weekDate:", {
+      console.log("[TimePage] DEBUG: parsed weekDate:", {
         weekDate: weekDate.toString(),
         weekDateISO: weekDate.toISOString(),
         isValid: !isNaN(weekDate.getTime()),
@@ -31,27 +31,27 @@ export default async function TimePage({
       if (!isNaN(weekDate.getTime())) {
         // Krijg maandag van deze week
         monday = startOfWeek(weekDate, { weekStartsOn: 1 });
-        console.log("🔍 [TimePage] DEBUG: calculated monday:", {
+        console.log("[TimePage] DEBUG: calculated monday:", {
           monday: monday.toString(),
           mondayISO: monday.toISOString(),
         });
       } else {
         // Invalide datum, gebruik huidige week
-        console.log("🔍 [TimePage] DEBUG: invalid date, using current week");
+        console.log("[TimePage] DEBUG: invalid date, using current week");
         monday = getCurrentWeekMonday();
       }
     } catch (error) {
       // Parse error, gebruik huidige week
-      console.log("🔍 [TimePage] DEBUG: parse error:", error);
+      console.log("[TimePage] DEBUG: parse error:", error);
       monday = getCurrentWeekMonday();
     }
   } else {
     // Geen week parameter, gebruik huidige week
-    console.log("🔍 [TimePage] DEBUG: no week parameter, using current week");
+    console.log("[TimePage] DEBUG: no week parameter, using current week");
     monday = getCurrentWeekMonday();
   }
   
-  console.log("🔍 [TimePage] DEBUG: final monday:", {
+  console.log("[TimePage] DEBUG: final monday:", {
     monday: monday.toString(),
     mondayISO: monday.toISOString(),
     formatted: format(monday, 'yyyy-MM-dd'),
@@ -84,7 +84,7 @@ export default async function TimePage({
   const clients = await getClients();
 
   const weekStartString = format(monday, 'yyyy-MM-dd');
-  console.log("🔍 [TimePage] Final weekStart string:", weekStartString);
+  console.log("[TimePage] Final weekStart string:", weekStartString);
   
   return (
     <TimeEntriesView

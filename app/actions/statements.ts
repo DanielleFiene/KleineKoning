@@ -129,8 +129,8 @@ export async function createStatement(
 
   // Generate statement number and create statement with retry logic
   // This handles race conditions where multiple requests try to create statements simultaneously
-  let statement;
-  let statementError;
+  let statement: { id: string; statement_number: string; [key: string]: any } | null = null;
+  let statementError: any = null;
   const maxRetries = 5;
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
@@ -167,6 +167,10 @@ export async function createStatement(
 
   if (statementError) {
     throw statementError;
+  }
+
+  if (!statement) {
+    throw new Error("Failed to create statement");
   }
 
   // Get client and project names for snapshot

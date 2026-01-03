@@ -102,7 +102,7 @@ export function TimeEntriesView({
   });
   
   // Debug logging
-  console.log("🔍 [TimeEntriesView] DEBUG:", {
+  console.log("[TimeEntriesView] DEBUG:", {
     weekStart,
     weekStartDate: weekStartDate.toString(),
     weekStartDateISO: weekStartDate.toISOString(),
@@ -387,12 +387,12 @@ export function TimeEntriesView({
   };
 
   const navigateToToday = () => {
-    console.log("🔍 [navigateToToday] DEBUG START");
+    console.log("[navigateToToday] DEBUG START");
     // Use getCurrentWeekMonday() which uses getTodayDate() - no timezone issues
     const monday = getCurrentWeekMonday();
-    console.log("🔍 [navigateToToday] monday object:", monday);
-    console.log("🔍 [navigateToToday] monday.toString():", monday.toString());
-    console.log("🔍 [navigateToToday] monday.toISOString():", monday.toISOString());
+    console.log("[navigateToToday] monday object:", monday);
+    console.log("[navigateToToday] monday.toString():", monday.toString());
+    console.log("[navigateToToday] monday.toISOString():", monday.toISOString());
     
     const params = new URLSearchParams();
     // Format using local date components to avoid timezone issues
@@ -401,7 +401,7 @@ export function TimeEntriesView({
     const day = String(monday.getDate()).padStart(2, "0");
     const weekString = `${year}-${month}-${day}`;
     
-    console.log("🔍 [navigateToToday] DEBUG:", {
+    console.log("[navigateToToday] DEBUG:", {
       monday,
       year,
       month,
@@ -418,7 +418,7 @@ export function TimeEntriesView({
     if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
     
     const finalUrl = `/time?${params.toString()}`;
-    console.log("🔍 [navigateToToday] Final URL:", finalUrl);
+    console.log("[navigateToToday] Final URL:", finalUrl);
     router.push(finalUrl);
   };
 
@@ -676,7 +676,7 @@ export function TimeEntriesView({
       }
       
       if (savedEntries.length > 0) {
-        console.log(`✅ Timer entries opgeslagen:\n${savedEntries.join("\n")}`);
+        console.log(`Timer entries opgeslagen:\n${savedEntries.join("\n")}`);
         router.refresh();
       }
       return;
@@ -694,7 +694,7 @@ export function TimeEntriesView({
       
       // Only save if rounded minutes > 0
       if (roundedMinutes <= 0) {
-        console.log("⚠️ Timer entry niet opgeslagen: afgerond naar 0 minuten");
+        console.log("Timer entry niet opgeslagen: afgerond naar 0 minuten");
         return;
       }
 
@@ -719,7 +719,7 @@ export function TimeEntriesView({
         return mins > 0 ? `${hours}u ${mins}min` : `${hours}u`;
       };
       
-      console.log(`✅ Timer entry opgeslagen: ${formatDuration(roundedMinutes)} voor ${clientName} - ${projectName}`);
+      console.log(`Timer entry opgeslagen: ${formatDuration(roundedMinutes)} voor ${clientName} - ${projectName}`);
       
       toast.showSuccess(`Timer entry opgeslagen: ${formatDuration(roundedMinutes)}`);
       router.refresh();
@@ -816,7 +816,7 @@ export function TimeEntriesView({
                   value={getTodayDate()}
                   onChange={(newDate) => {
                     if (newDate) {
-                      console.log("🔍 [DatePicker onChange] DEBUG START:", {
+                      console.log("[DatePicker onChange] DEBUG START:", {
                         newDate: newDate.toString(),
                         newDateISO: newDate.toISOString(),
                         newDateYear: newDate.getFullYear(),
@@ -825,7 +825,7 @@ export function TimeEntriesView({
                       });
                       
                       const monday = startOfWeek(newDate, { weekStartsOn: 1 });
-                      console.log("🔍 [DatePicker onChange] monday:", {
+                      console.log("[DatePicker onChange] monday:", {
                         monday: monday.toString(),
                         mondayISO: monday.toISOString(),
                         mondayYear: monday.getFullYear(),
@@ -840,7 +840,7 @@ export function TimeEntriesView({
                       const day = String(monday.getDate()).padStart(2, "0");
                       const weekString = `${year}-${month}-${day}`;
                       
-                      console.log("🔍 [DatePicker onChange] Final:", {
+                      console.log("[DatePicker onChange] Final:", {
                         year,
                         month,
                         day,
@@ -852,7 +852,7 @@ export function TimeEntriesView({
                       if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
                       
                       const finalUrl = `/time?${params.toString()}`;
-                      console.log("🔍 [DatePicker onChange] Final URL:", finalUrl);
+                      console.log("[DatePicker onChange] Final URL:", finalUrl);
                       router.push(finalUrl);
                     }
                   }}
