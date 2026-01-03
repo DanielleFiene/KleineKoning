@@ -10,10 +10,10 @@ export default async function NewProjectPage({
   const clients = await getClients();
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Nieuw Project</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
+    <div>
+      <div>
+        <h1>Nieuw Project</h1>
+        <p>
           Voeg een nieuw project toe aan een klant
         </p>
       </div>
@@ -21,4 +21,3 @@ export default async function NewProjectPage({
     </div>
   );
 }
-

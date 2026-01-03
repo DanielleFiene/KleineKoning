@@ -15,28 +15,23 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import { Clock, Users, FolderKanban, FileText } from "lucide-react";
 
 const menuItems = [
   {
     title: "Tijd",
     url: "/time",
-    icon: Clock,
+  },
+  {
+    title: "Export",
+    url: "/exports",
   },
   {
     title: "Klanten",
     url: "/clients",
-    icon: Users,
   },
   {
     title: "Projecten",
     url: "/projects",
-    icon: FolderKanban,
-  },
-  {
-    title: "Exports",
-    url: "/exports",
-    icon: FileText,
   },
 ];
 
@@ -45,18 +40,17 @@ export function SidebarNav() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b px-4 py-4">
-        <div className="flex items-center gap-3">
+      <SidebarHeader>
+        <div>
           <Image
             src="/KleineKoning.jpg"
             alt="KleineKoning Logo"
             width={40}
             height={40}
-            className="rounded-lg object-contain"
           />
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold">KleineKoning</span>
-            <span className="text-xs text-muted-foreground">Tijdregistratie</span>
+          <div>
+            <span>KleineKoning</span>
+            <span>Tijdregistratie</span>
           </div>
         </div>
       </SidebarHeader>
@@ -66,13 +60,11 @@ export function SidebarNav() {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => {
-                const Icon = item.icon;
                 const isActive = pathname === item.url;
                 return (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton asChild isActive={isActive}>
                       <Link href={item.url}>
-                        <Icon />
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
@@ -86,4 +78,3 @@ export function SidebarNav() {
     </Sidebar>
   );
 }
-

@@ -13,44 +13,43 @@ export default async function ProjectDetailPage({
   const project = await getProject(params.id);
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{project.name}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
+    <div>
+      <div>
+        <div>
+          <h1>{project.name}</h1>
+          <p>
             Klant: {(project as any).clients?.name || "-"}
           </p>
         </div>
-        <Link href={`/projects/${params.id}/edit`} className="w-full sm:w-auto">
-          <Button variant="outline" className="w-full sm:w-auto">
-            <Edit className="h-4 w-4 mr-2" />
+        <Link href={`/projects/${params.id}/edit`}>
+          <Button variant="outline">
+            <Edit />
             Bewerken
           </Button>
         </Link>
       </div>
 
-      <Card className="shadow-sm">
+      <Card>
         <CardHeader>
           <CardTitle>Project Details</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 md:space-y-6">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Tarief (ex BTW)</p>
-            <p className="text-lg font-semibold">
+        <CardContent>
+          <div>
+            <p>Tarief (ex BTW)</p>
+            <p>
               {project.rate_ex_btw ? `€${project.rate_ex_btw.toFixed(2)}` : "Niet ingesteld"}
             </p>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Standaard Unit</p>
-            <p className="text-lg font-semibold">{project.default_unit}</p>
+          <div>
+            <p>Standaard Unit</p>
+            <p>{project.default_unit}</p>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground">Afrondingsregel</p>
-            <p className="text-lg font-semibold">{project.rounding_rule}</p>
+          <div>
+            <p>Afrondingsregel</p>
+            <p>{project.rounding_rule}</p>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-

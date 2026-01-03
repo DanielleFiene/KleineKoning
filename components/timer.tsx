@@ -2,9 +2,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Play, Square, Clock } from "lucide-react";
 
 interface TimerState {
   isRunning: boolean;
@@ -39,13 +36,12 @@ export function Timer({
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Check if timer was running and calculate elapsed time
           if (parsed.isRunning && parsed.startTime) {
             const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
             return {
               ...parsed,
               elapsedSeconds: parsed.elapsedSeconds + elapsed,
-              startTime: Date.now(), // Reset start time to now
+              startTime: Date.now(),
             };
           }
           return parsed;
@@ -66,14 +62,12 @@ export function Timer({
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Save to localStorage whenever state changes
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(timerState));
     }
   }, [timerState]);
 
-  // Timer tick
   useEffect(() => {
     if (timerState.isRunning) {
       intervalRef.current = setInterval(() => {
@@ -111,7 +105,6 @@ export function Timer({
     }));
   };
 
-  // Listen for storage changes (when setup dialog updates timer)
   useEffect(() => {
     const handleStorageChange = () => {
       if (typeof window !== "undefined") {
@@ -133,7 +126,6 @@ export function Timer({
     };
 
     window.addEventListener("storage", handleStorageChange);
-    // Also check periodically (for same-tab updates)
     const interval = setInterval(handleStorageChange, 1000);
 
     return () => {
@@ -151,7 +143,6 @@ export function Timer({
       startTime: null,
     }));
 
-    // Calculate total minutes
     const totalMinutes = Math.floor(timerState.elapsedSeconds / 60);
     
     if (totalMinutes > 0 && timerState.clientId && timerState.projectId) {
@@ -193,76 +184,62 @@ export function Timer({
   const selectedProject = projects.find((p) => p.id === timerState.projectId);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Timer
-        </CardTitle>
-        <CardDescription>
-          Start een timer voor je huidige werk
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="text-center py-4">
-          <div className="text-4xl font-mono font-bold">
-            {formatTime(timerState.elapsedSeconds)}
-          </div>
-          <div className="text-sm text-muted-foreground mt-2">
-            {timerState.isRunning ? "Timer loopt..." : "Timer gestopt"}
-          </div>
+    <div>
+      <div>
+        <div>Timer</div>
+        <div>Start een timer voor je huidige werk</div>
+      </div>
+      <div>
+        <div>
+          <div>{formatTime(timerState.elapsedSeconds)}</div>
+          <div>{timerState.isRunning ? "Timer loopt..." : "Timer gestopt"}</div>
         </div>
 
         {selectedClient && selectedProject && (
-          <div className="text-sm space-y-1 p-3 bg-muted rounded-lg">
+          <div>
             <div>
-              <span className="font-medium">Klant:</span> {selectedClient.name}
+              <span>Klant:</span>
+              <span>{selectedClient.name}</span>
             </div>
             <div>
-              <span className="font-medium">Project:</span> {selectedProject.name}
+              <span>Project:</span>
+              <span>{selectedProject.name}</span>
             </div>
             {timerState.description && (
               <div>
-                <span className="font-medium">Omschrijving:</span> {timerState.description}
+                <span>Omschrijving:</span>
+                <span>{timerState.description}</span>
               </div>
             )}
           </div>
         )}
 
         {(!timerState.clientId || !timerState.projectId) && !timerState.isRunning && (
-          <Button
-            onClick={() => onSetup?.()}
-            variant="outline"
-            className="w-full"
-          >
+          <button onClick={() => onSetup?.()}>
             Timer Instellen
-          </Button>
+          </button>
         )}
 
-        <div className="flex gap-2">
+        <div>
           {!timerState.isRunning ? (
-            <Button
+            <button
               onClick={handleStart}
               disabled={!timerState.clientId || !timerState.projectId}
-              className="flex-1"
             >
-              <Play className="h-4 w-4 mr-2" />
               Start
-            </Button>
+            </button>
           ) : (
-            <Button onClick={handleStop} variant="destructive" className="flex-1">
-              <Square className="h-4 w-4 mr-2" />
+            <button onClick={handleStop}>
               Stop
-            </Button>
+            </button>
           )}
           {timerState.elapsedSeconds > 0 && (
-            <Button onClick={handleReset} variant="outline">
+            <button onClick={handleReset}>
               Reset
-            </Button>
+            </button>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
-

@@ -51,7 +51,7 @@ export async function getClient(id: string) {
   return data;
 }
 
-export async function createClient(formData: FormData) {
+export async function addClient(formData: FormData) {
   const supabase = await createClient();
   const {
     data: { user },

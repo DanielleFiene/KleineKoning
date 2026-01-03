@@ -12,10 +12,10 @@ export default async function EditProjectPage({
   const clients = await getClients();
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Project bewerken</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
+    <div>
+      <div>
+        <h1>Project bewerken</h1>
+        <p>
           Wijzig de instellingen van dit project
         </p>
       </div>
@@ -33,4 +33,3 @@ export default async function EditProjectPage({
     </div>
   );
 }
-

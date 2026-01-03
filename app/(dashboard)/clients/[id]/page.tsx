@@ -23,31 +23,31 @@ export default async function ClientDetailPage({
   const projects = await getProjectsByClient(params.id);
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{client.name}</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
+    <div>
+      <div>
+        <div>
+          <h1>{client.name}</h1>
+          <p>
             BTW Profiel: {client.btw_profile.label} ({client.btw_profile.percentage}%)
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Link href={`/clients/${params.id}/edit`} className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto">
-              <Edit className="h-4 w-4 mr-2" />
+        <div>
+          <Link href={`/clients/${params.id}/edit`}>
+            <Button variant="outline">
+              <Edit />
               Bewerken
             </Button>
           </Link>
-          <Link href={`/projects/new?client_id=${params.id}`} className="w-full sm:w-auto">
-            <Button className="w-full sm:w-auto">
-              <Plus className="h-4 w-4 mr-2" />
+          <Link href={`/projects/new?client_id=${params.id}`}>
+            <Button>
+              <Plus />
               Nieuw Project
             </Button>
           </Link>
         </div>
       </div>
 
-      <Card className="shadow-sm">
+      <Card>
         <CardHeader>
           <CardTitle>Projecten</CardTitle>
           <CardDescription>
@@ -56,48 +56,45 @@ export default async function ClientDetailPage({
         </CardHeader>
         <CardContent>
           {projects.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
+            <p>
               Nog geen projecten voor deze klant
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Naam</TableHead>
-                    <TableHead className="hidden md:table-cell">Tarief (ex BTW)</TableHead>
-                    <TableHead className="hidden lg:table-cell">Unit</TableHead>
-                    <TableHead className="hidden lg:table-cell">Afronding</TableHead>
-                    <TableHead className="text-right">Acties</TableHead>
+                    <TableHead>Tarief (ex BTW)</TableHead>
+                    <TableHead>Unit</TableHead>
+                    <TableHead>Afronding</TableHead>
+                    <TableHead>Acties</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {projects.map((project) => (
                     <TableRow key={project.id}>
-                      <TableCell className="font-medium">
-                        <Link
-                          href={`/projects/${project.id}`}
-                          className="hover:underline"
-                        >
+                      <TableCell>
+                        <Link href={`/projects/${project.id}`}>
                           {project.name}
                         </Link>
-                        <div className="text-xs text-muted-foreground md:hidden mt-1">
+                        <div>
                           {project.rate_ex_btw
                             ? `€${project.rate_ex_btw.toFixed(2)}`
                             : "-"} • {project.default_unit} • {project.rounding_rule}
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell>
                         {project.rate_ex_btw
                           ? `€${project.rate_ex_btw.toFixed(2)}`
                           : "-"}
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">{project.default_unit}</TableCell>
-                      <TableCell className="hidden lg:table-cell">{project.rounding_rule}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell>{project.default_unit}</TableCell>
+                      <TableCell>{project.rounding_rule}</TableCell>
+                      <TableCell>
                         <Link href={`/projects/${project.id}/edit`}>
                           <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
+                            <Edit />
                           </Button>
                         </Link>
                       </TableCell>
@@ -112,4 +109,3 @@ export default async function ClientDetailPage({
     </div>
   );
 }
-

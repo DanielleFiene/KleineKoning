@@ -2,29 +2,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { createTimeEntry, deleteTimeEntry } from "@/app/actions/time-entries";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek } from "date-fns";
+import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek, isSameWeek } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Timer } from "@/components/timer";
 import { TimerSetupDialog } from "@/components/timer-setup-dialog";
@@ -55,8 +35,35 @@ export function TimeEntriesView({
 }) {
   const router = useRouter();
   const [entries, setEntries] = useState<TimeEntry[]>(initialEntries);
-  const [selectedClient, setSelectedClient] = useState<string>("");
+  const [filterClient, setFilterClient] = useState<string>("");
+  const [filterProject, setFilterProject] = useState<string>("");
   const [projects, setProjects] = useState<any[]>([]);
+  const [entryModalOpen, setEntryModalOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+
+  // Update entries when weekStart changes (from URL)
+  useEffect(() => {
+    setEntries(initialEntries);
+  }, [initialEntries]);
+
+  // Ensure URL has week parameter on initial load, and redirect to current week if missing
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.has("week")) {
+      // Calculate current week (Monday) - use today's date
+      const today = new Date();
+      const monday = startOfWeek(today, { weekStartsOn: 1 });
+      // Update URL with current week
+      const params = new URLSearchParams();
+      params.set("week", format(monday, "yyyy-MM-dd"));
+      if (filterClient) params.set("client_id", filterClient);
+      if (filterProject) params.set("project_id", filterProject);
+      router.replace(`/time?${params.toString()}`, { scroll: false });
+    }
+  }, []); // Only run once on mount
+  
+  // Entry form state
+  const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [description, setDescription] = useState("");
@@ -73,18 +80,16 @@ export function TimeEntriesView({
     projectId: string;
     description: string;
   } | null>(null);
-  const [timerClientId, setTimerClientId] = useState<string | null>(null);
-  const [timerProjectId, setTimerProjectId] = useState<string | null>(null);
-  const [timerDescription, setTimerDescription] = useState<string>("");
   const [allProjects, setAllProjects] = useState<any[]>([]);
 
-  const currentWeek = startOfWeek(new Date(weekStart), { weekStartsOn: 1 });
+  // Parse weekStart string to Date, ensuring it's valid
+  const weekStartDate = new Date(weekStart);
+  const currentWeek = startOfWeek(isNaN(weekStartDate.getTime()) ? new Date() : weekStartDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({
     start: currentWeek,
     end: endOfWeek(currentWeek, { weekStartsOn: 1 }),
   });
 
-  // Load all projects for timer
   useEffect(() => {
     const loadAllProjects = async () => {
       const allProjs: any[] = [];
@@ -101,6 +106,35 @@ export function TimeEntriesView({
     };
     loadAllProjects();
   }, [clients]);
+
+  const handleFilterClientChange = async (clientId: string) => {
+    setFilterClient(clientId);
+    setFilterProject("");
+    if (clientId) {
+      try {
+        const response = await fetch(`/api/projects?client_id=${clientId}`);
+        const projs = await response.json();
+        setProjects(projs);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        setProjects([]);
+      }
+    } else {
+      setProjects([]);
+    }
+    // Update URL with filter
+    const params = new URLSearchParams();
+    if (clientId) params.set("client_id", clientId);
+    router.push(`/time?week=${format(currentWeek, "yyyy-MM-dd")}&${params.toString()}`);
+  };
+
+  const handleFilterProjectChange = (projectId: string) => {
+    setFilterProject(projectId);
+    const params = new URLSearchParams();
+    if (filterClient) params.set("client_id", filterClient);
+    if (projectId) params.set("project_id", projectId);
+    router.push(`/time?week=${format(currentWeek, "yyyy-MM-dd")}&${params.toString()}`);
+  };
 
   const handleClientChange = async (clientId: string) => {
     setSelectedClient(clientId);
@@ -142,6 +176,7 @@ export function TimeEntriesView({
       setDescription("");
       setDurationValue("");
       setSelectedProject("");
+      setEntryModalOpen(false);
       
       router.refresh();
     } catch (error) {
@@ -167,11 +202,28 @@ export function TimeEntriesView({
     const newWeek = direction === "next" 
       ? addWeeks(currentWeek, 1)
       : subWeeks(currentWeek, 1);
-    router.push(`/time?week=${format(newWeek, "yyyy-MM-dd")}`);
+    const params = new URLSearchParams();
+    if (filterClient) params.set("client_id", filterClient);
+    if (filterProject) params.set("project_id", filterProject);
+    router.push(`/time?week=${format(newWeek, "yyyy-MM-dd")}&${params.toString()}`);
   };
 
+  const navigateToToday = () => {
+    const today = new Date();
+    const monday = startOfWeek(today, { weekStartsOn: 1 });
+    const params = new URLSearchParams();
+    params.set("week", format(monday, "yyyy-MM-dd"));
+    if (filterClient) params.set("client_id", filterClient);
+    if (filterProject) params.set("project_id", filterProject);
+    router.push(`/time?${params.toString()}`);
+  };
+
+  const isCurrentWeek = isSameWeek(currentWeek, new Date(), { weekStartsOn: 1 });
+
+  // Group entries by date (YYYY-MM-DD format)
   const entriesByDate = entries.reduce((acc, entry) => {
-    const date = entry.date;
+    // Ensure date is in YYYY-MM-DD format
+    const date = entry.date.split("T")[0]; // Handle ISO datetime strings
     if (!acc[date]) {
       acc[date] = [];
     }
@@ -186,13 +238,35 @@ export function TimeEntriesView({
     return mins > 0 ? `${hours}u ${mins}min` : `${hours}u`;
   };
 
-  // Timer handlers
+  const calculateWeekTotal = () => {
+    return entries.reduce((sum, e) => sum + e.duration_minutes, 0);
+  };
+
+  const getProjectRoundingRule = (projectId: string) => {
+    const project = allProjects.find((p) => p.id === projectId);
+    return (project?.rounding_rule as "none" | "nearest15" | "up15" | "down15") || "none";
+  };
+
+  const applyRounding = (minutes: number, rule: "none" | "nearest15" | "up15" | "down15"): number => {
+    switch (rule) {
+      case "none":
+        return minutes;
+      case "nearest15":
+        return Math.round(minutes / 15) * 15;
+      case "up15":
+        return Math.ceil(minutes / 15) * 15;
+      case "down15":
+        return Math.floor(minutes / 15) * 15;
+      default:
+        return minutes;
+    }
+  };
+
   const handleTimerSetup = (data: {
     clientId: string;
     projectId: string;
     description: string;
   }) => {
-    // Update timer state in localStorage
     if (typeof window !== "undefined") {
       const currentTimer = localStorage.getItem("kleinekoning_timer");
       let updated;
@@ -226,12 +300,8 @@ export function TimeEntriesView({
         };
       }
       localStorage.setItem("kleinekoning_timer", JSON.stringify(updated));
-      // Trigger storage event for timer component
       window.dispatchEvent(new Event("storage"));
     }
-    setTimerClientId(data.clientId);
-    setTimerProjectId(data.projectId);
-    setTimerDescription(data.description);
     setTimerSetupOpen(false);
   };
 
@@ -263,10 +333,6 @@ export function TimeEntriesView({
 
       await createTimeEntry(formData);
       
-      // Reset timer state
-      setTimerClientId(null);
-      setTimerProjectId(null);
-      setTimerDescription("");
       if (typeof window !== "undefined") {
         localStorage.removeItem("kleinekoning_timer");
       }
@@ -277,11 +343,6 @@ export function TimeEntriesView({
     }
   };
 
-  const getProjectRoundingRule = (projectId: string) => {
-    const project = allProjects.find((p) => p.id === projectId);
-    return (project?.rounding_rule as "none" | "nearest15" | "up15" | "down15") || "none";
-  };
-
   const getClientName = (clientId: string) => {
     return clients.find((c) => c.id === clientId)?.name || "";
   };
@@ -290,167 +351,98 @@ export function TimeEntriesView({
     return allProjects.find((p) => p.id === projectId)?.name || "";
   };
 
+  const openEntryModal = () => {
+    setEditingEntry(null);
+    setSelectedClient("");
+    setSelectedProject("");
+    setDate(new Date().toISOString().split("T")[0]);
+    setDescription("");
+    setDurationValue("");
+    setDurationUnit("minutes");
+    setEntryModalOpen(true);
+  };
+
   return (
-    <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tijdregistratie</h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Registreer je gewerkte uren per project
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigateWeek("prev")}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-xs sm:text-sm font-medium min-w-[140px] sm:min-w-[200px] text-center">
-            {format(currentWeek, "d MMM", { locale: nl })} -{" "}
-            {format(endOfWeek(currentWeek, { weekStartsOn: 1 }), "d MMM yyyy", { locale: nl })}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigateWeek("next")}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+    <div>
+      {/* Bovenbalk */}
+      <div>
+        <div>
+          {/* Week selector */}
+          <div>
+            <button onClick={() => navigateWeek("prev")}>
+              &lt;
+            </button>
+            <span>
+              {format(currentWeek, "d MMM", { locale: nl })} -{" "}
+              {format(endOfWeek(currentWeek, { weekStartsOn: 1 }), "d MMM yyyy", { locale: nl })}
+            </span>
+            <button onClick={() => navigateWeek("next")}>
+              &gt;
+            </button>
+            <button onClick={navigateToToday} disabled={isCurrentWeek}>
+              Vandaag
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div>
+            <label htmlFor="filter-client">Klant</label>
+            <select
+              id="filter-client"
+              value={filterClient}
+              onChange={(e) => handleFilterClientChange(e.target.value)}
+            >
+              <option value="">Alle klanten</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.name}
+                </option>
+              ))}
+            </select>
+
+            <label htmlFor="filter-project">Project</label>
+            <select
+              id="filter-project"
+              value={filterProject}
+              onChange={(e) => handleFilterProjectChange(e.target.value)}
+              disabled={!filterClient}
+            >
+              <option value="">Alle projecten</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* CTA: + Entry */}
+          <button onClick={openEntryModal}>
+            + Entry
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Timer */}
+      <div>
         <Timer
           onStop={handleTimerStop}
           onSetup={() => setTimerSetupOpen(true)}
           clients={clients}
           projects={allProjects}
         />
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Add</CardTitle>
-            <CardDescription>Voeg snel een tijdentry toe</CardDescription>
-          </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="client_id">Klant *</Label>
-                <Select
-                  value={selectedClient}
-                  onValueChange={handleClientChange}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecteer klant" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clients.map((client) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="project_id">Project *</Label>
-                <Select
-                  value={selectedProject}
-                  onValueChange={setSelectedProject}
-                  required
-                  disabled={!selectedClient}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecteer project" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Datum *</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="duration_value">Duur *</Label>
-                <Input
-                  id="duration_value"
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  value={durationValue}
-                  onChange={(e) => setDurationValue(e.target.value)}
-                  required
-                  placeholder="1.5"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="duration_unit">Unit *</Label>
-                <Select
-                  value={durationUnit}
-                  onValueChange={setDurationUnit}
-                  required
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minutes">Minuten</SelectItem>
-                    <SelectItem value="quarter">Kwartier</SelectItem>
-                    <SelectItem value="hour">Uur</SelectItem>
-                    <SelectItem value="day">Dag</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Omschrijving *</Label>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                required
-                placeholder="Wat heb je gedaan?"
-              />
-            </div>
-
-            <Button type="submit" disabled={loading}>
-              <Plus className="h-4 w-4 mr-2" />
-              {loading ? "Toevoegen..." : "Toevoegen"}
-            </Button>
-          </form>
-        </CardContent>
-        </Card>
       </div>
 
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>Week Overzicht</CardTitle>
-          <CardDescription>Entries gegroepeerd per dag</CardDescription>
-        </CardHeader>
-        <CardContent>
+      {/* Weekoverzicht */}
+      <div>
+        <div>
+          <h2>Week Overzicht</h2>
+          <div>
+            <span>Week totaal: {formatDuration(calculateWeekTotal())}</span>
+          </div>
+        </div>
+
+        <div>
           {weekDays.map((day) => {
             const dayStr = format(day, "yyyy-MM-dd");
             const dayEntries = entriesByDate[dayStr] || [];
@@ -460,69 +452,174 @@ export function TimeEntriesView({
             );
 
             return (
-              <div key={dayStr} className="mb-6 last:mb-0">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
-                  <h3 className="font-semibold text-base sm:text-lg">
-                    {format(day, "EEEE d MMMM", { locale: nl })}
-                  </h3>
-                  <span className="text-sm text-muted-foreground">
-                    Totaal: {formatDuration(dayTotal)}
-                  </span>
+              <div key={dayStr}>
+                <div>
+                  <h3>{format(day, "EEEE d MMMM", { locale: nl })}</h3>
+                  <div>
+                    <span>Totaal: {formatDuration(dayTotal)}</span>
+                  </div>
                 </div>
                 {dayEntries.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-2">
-                    Geen entries voor deze dag
-                  </p>
+                  <div>
+                    <p>Geen entries voor deze dag</p>
+                  </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="hidden sm:table-cell">Tijd</TableHead>
-                          <TableHead className="hidden md:table-cell">Klant</TableHead>
-                          <TableHead>Project</TableHead>
-                          <TableHead className="hidden lg:table-cell">Omschrijving</TableHead>
-                          <TableHead className="text-right">Duur</TableHead>
-                          <TableHead className="text-right">Acties</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                  <div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Project</th>
+                          <th>Omschrijving</th>
+                          <th>Duur</th>
+                          <th>Acties</th>
+                        </tr>
+                      </thead>
+                      <tbody>
                         {dayEntries.map((entry) => (
-                          <TableRow key={entry.id}>
-                            <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
-                              {format(new Date(entry.date + "T00:00:00"), "HH:mm")}
-                            </TableCell>
-                            <TableCell className="hidden md:table-cell">{entry.clients.name}</TableCell>
-                            <TableCell className="font-medium">
-                              {entry.projects.name}
-                              <div className="text-xs text-muted-foreground md:hidden mt-1">
-                                {entry.clients.name} • {entry.description}
-                              </div>
-                            </TableCell>
-                            <TableCell className="hidden lg:table-cell">{entry.description}</TableCell>
-                            <TableCell className="text-right">
-                              {formatDuration(entry.duration_minutes)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDelete(entry.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
+                          <tr key={entry.id}>
+                            <td>{entry.projects.name}</td>
+                            <td>{entry.description}</td>
+                            <td>{formatDuration(entry.duration_minutes)}</td>
+                            <td>
+                              <button onClick={() => handleDelete(entry.id)}>
+                                Verwijderen
+                              </button>
+                            </td>
+                          </tr>
                         ))}
-                      </TableBody>
-                    </Table>
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
             );
           })}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {/* Entry Modal */}
+      {entryModalOpen && (
+        <div>
+          <div>
+            <div>
+              <div>{editingEntry ? "Entry bewerken" : "Nieuwe Entry"}</div>
+              <button onClick={() => setEntryModalOpen(false)}>×</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div>
+                <label htmlFor="entry-date">Datum *</label>
+                <input
+                  id="entry-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="entry-client">Klant *</label>
+                <select
+                  id="entry-client"
+                  value={selectedClient}
+                  onChange={(e) => handleClientChange(e.target.value)}
+                  required
+                >
+                  <option value="">Selecteer klant</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="entry-project">Project *</label>
+                <select
+                  id="entry-project"
+                  value={selectedProject}
+                  onChange={(e) => setSelectedProject(e.target.value)}
+                  required
+                  disabled={!selectedClient}
+                >
+                  <option value="">Selecteer project</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="entry-description">Omschrijving *</label>
+                <input
+                  id="entry-description"
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                  placeholder="Wat heb je gedaan?"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="entry-duration-value">Duur *</label>
+                <input
+                  id="entry-duration-value"
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  value={durationValue}
+                  onChange={(e) => setDurationValue(e.target.value)}
+                  required
+                  placeholder="1.5"
+                />
+                <select
+                  id="entry-duration-unit"
+                  value={durationUnit}
+                  onChange={(e) => setDurationUnit(e.target.value)}
+                  required
+                >
+                  <option value="minutes">Minuten</option>
+                  <option value="quarter">Kwartier</option>
+                  <option value="hour">Uur</option>
+                  <option value="day">Dag</option>
+                </select>
+              </div>
+
+              {selectedProject && durationValue && (
+                <div>
+                  <div>
+                    Afronding preview:
+                  </div>
+                  <div>
+                    Invoer: {durationValue} {durationUnit}
+                  </div>
+                  <div>
+                    Wordt: {formatDuration(
+                      applyRounding(
+                        parseFloat(durationValue) * (durationUnit === "minutes" ? 1 : durationUnit === "quarter" ? 15 : durationUnit === "hour" ? 60 : 480),
+                        getProjectRoundingRule(selectedProject)
+                      )
+                    )} ({getProjectRoundingRule(selectedProject)})
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <button type="button" onClick={() => setEntryModalOpen(false)}>
+                  Annuleren
+                </button>
+                <button type="submit" disabled={loading}>
+                  {loading ? "Opslaan..." : "Opslaan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <TimerSetupDialog
         open={timerSetupOpen}
@@ -545,4 +642,3 @@ export function TimeEntriesView({
     </div>
   );
 }
-

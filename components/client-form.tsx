@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient, updateClient } from "@/app/actions/clients";
+import { addClient, updateClient } from "@/app/actions/clients";
 import { useRouter } from "next/navigation";
 
 interface ClientFormProps {
@@ -68,7 +68,7 @@ export function ClientForm({ client }: ClientFormProps) {
       if (isEdit && client) {
         await updateClient(client.id, formData);
       } else {
-        await createClient(formData);
+        await addClient(formData);
       }
       router.push("/clients");
       router.refresh();

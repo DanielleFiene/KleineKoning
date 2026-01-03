@@ -2,24 +2,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 interface TimerSetupDialogProps {
   open: boolean;
@@ -68,85 +50,79 @@ export function TimerSetupDialog({
       description: description.trim(),
     });
 
-    // Reset form
     setSelectedClient("");
     setSelectedProject("");
     setDescription("");
     onOpenChange(false);
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Timer Instellen</DialogTitle>
-          <DialogDescription>
-            Selecteer klant en project om de timer te starten
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="timer-client">Klant *</Label>
-            <Select value={selectedClient} onValueChange={setSelectedClient}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer klant" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="timer-project">Project *</Label>
-            <Select
-              value={selectedProject}
-              onValueChange={setSelectedProject}
-              disabled={!selectedClient}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer project" />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="timer-description">Omschrijving *</Label>
-            <Input
-              id="timer-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Wat ga je doen?"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSave();
-                }
-              }}
-            />
-          </div>
+    <div>
+      <div>
+        <div>Timer Instellen</div>
+        <div>Selecteer klant en project om de timer te starten</div>
+      </div>
+      <div>
+        <div>
+          <label htmlFor="timer-client">Klant *</label>
+          <select
+            id="timer-client"
+            value={selectedClient}
+            onChange={(e) => setSelectedClient(e.target.value)}
+          >
+            <option value="">Selecteer klant</option>
+            {clients.map((client) => (
+              <option key={client.id} value={client.id}>
+                {client.name}
+              </option>
+            ))}
+          </select>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuleren
-          </Button>
-          <Button onClick={handleSave} disabled={loading}>
-            Opslaan
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+
+        <div>
+          <label htmlFor="timer-project">Project *</label>
+          <select
+            id="timer-project"
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            disabled={!selectedClient}
+          >
+            <option value="">Selecteer project</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="timer-description">Omschrijving *</label>
+          <input
+            id="timer-description"
+            type="text"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Wat ga je doen?"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSave();
+              }
+            }}
+          />
+        </div>
+      </div>
+      <div>
+        <button onClick={() => onOpenChange(false)}>
+          Annuleren
+        </button>
+        <button onClick={handleSave} disabled={loading}>
+          Opslaan
+        </button>
+      </div>
+    </div>
   );
 }
-

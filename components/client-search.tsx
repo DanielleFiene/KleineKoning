@@ -2,20 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Search, Edit, Trash2 } from "lucide-react";
-import Link from "next/link";
 import { deleteClient } from "@/app/actions/clients";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 interface Client {
   id: string;
@@ -49,66 +38,57 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="relative">
-        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Zoek klanten..."
+    <div>
+      <div>
+        <label htmlFor="client-search">Zoeken</label>
+        <input
+          id="client-search"
+          type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-8"
+          placeholder="Zoek op naam..."
         />
       </div>
 
       {filteredClients.length === 0 ? (
-        <p className="text-center text-muted-foreground py-8">
-          {search ? "Geen klanten gevonden" : "Nog geen klanten toegevoegd"}
-        </p>
+        <div>
+          <p>Geen klanten gevonden</p>
+        </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Naam</TableHead>
-              <TableHead>BTW Profiel</TableHead>
-              <TableHead className="text-right">Acties</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredClients.map((client) => (
-              <TableRow key={client.id}>
-                <TableCell className="font-medium">
-                  <Link
-                    href={`/clients/${client.id}`}
-                    className="hover:underline"
-                  >
-                    {client.name}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  {client.btw_profile.label} ({client.btw_profile.percentage}%)
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Link href={`/clients/${client.id}/edit`}>
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>Naam</th>
+                <th>BTW Profiel</th>
+                <th>Acties</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredClients.map((client) => (
+                <tr key={client.id}>
+                  <td>
+                    <Link href={`/clients/${client.id}`}>
+                      {client.name}
                     </Link>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(client.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                  </td>
+                  <td>
+                    {client.btw_profile.label} ({client.btw_profile.percentage}%)
+                  </td>
+                  <td>
+                    <Link href={`/clients/${client.id}/edit`}>
+                      <button>Bewerken</button>
+                    </Link>
+                    <button onClick={() => handleDelete(client.id)}>
+                      Verwijderen
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
 }
-
