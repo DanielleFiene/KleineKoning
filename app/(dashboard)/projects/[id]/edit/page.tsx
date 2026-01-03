@@ -1,3 +1,4 @@
+// app/(dashboard)/projects/[id]/edit/page.tsx
 import { getProject, getProjects } from "@/app/actions/projects";
 import { getClients } from "@/app/actions/clients";
 import { ProjectForm } from "@/components/project-form";

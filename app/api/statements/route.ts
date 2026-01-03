@@ -1,3 +1,4 @@
+// app/api/statements/route.ts
 import { getStatements } from "@/app/actions/statements";
 import { NextResponse } from "next/server";
 

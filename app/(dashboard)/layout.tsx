@@ -1,3 +1,4 @@
+// app/(dashboard)/layout.tsx
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { SidebarTrigger } from "@/components/ui/sidebar";

@@ -1,3 +1,4 @@
+// app/(dashboard)/projects/page.tsx
 import { getProjects } from "@/app/actions/projects";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {

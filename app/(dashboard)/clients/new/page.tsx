@@ -1,3 +1,4 @@
+// app/(dashboard)/clients/new/page.tsx
 import { ClientForm } from "@/components/client-form";
 
 export default function NewClientPage() {

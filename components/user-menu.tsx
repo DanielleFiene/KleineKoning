@@ -1,3 +1,4 @@
+// components/user-menu.tsx
 "use client";
 
 import { createClient } from "@/lib/supabase/client";

@@ -1,3 +1,4 @@
+// components/timer-stop-dialog.tsx
 "use client";
 
 import { useState } from "react";

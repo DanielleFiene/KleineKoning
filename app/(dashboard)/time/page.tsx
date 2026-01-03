@@ -1,3 +1,4 @@
+// app/(dashboard)/time/page.tsx
 import { getTimeEntries } from "@/app/actions/time-entries";
 import { getClients } from "@/app/actions/clients";
 import { TimeEntriesView } from "@/components/time-entries-view";

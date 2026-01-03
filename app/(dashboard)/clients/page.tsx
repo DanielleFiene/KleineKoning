@@ -1,3 +1,4 @@
+// app/(dashboard)/clients/page.tsx
 import { getClients } from "@/app/actions/clients";
 import { Button } from "@/components/ui/button";
 import {

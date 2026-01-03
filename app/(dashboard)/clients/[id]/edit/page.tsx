@@ -1,3 +1,4 @@
+// app/(dashboard)/clients/[id]/edit/page.tsx
 import { getClient } from "@/app/actions/clients";
 import { ClientForm } from "@/components/client-form";
 

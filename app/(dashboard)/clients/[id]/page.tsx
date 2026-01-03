@@ -1,3 +1,4 @@
+// app/(dashboard)/clients/[id]/page.tsx
 import { getClient } from "@/app/actions/clients";
 import { getProjectsByClient } from "@/app/actions/projects";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

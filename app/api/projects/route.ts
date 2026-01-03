@@ -1,3 +1,4 @@
+// app/api/projects/route.ts
 import { getProjectsByClient } from "@/app/actions/projects";
 import { NextResponse } from "next/server";
 
