@@ -1,5 +1,6 @@
 // app/(dashboard)/clients/[id]/edit/page.tsx
 import { getClient } from "@/app/actions/clients";
+import { Container, Box, Typography } from "@mui/material";
 import { ClientForm } from "@/components/client-form";
 
 export default async function EditClientPage({
@@ -12,16 +13,22 @@ export default async function EditClientPage({
   const client = await getClient(id);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Klant bewerken</h1>
-        </div>
-      </div>
-
-      {/* Content Card */}
-      <ClientForm client={client} />
-    </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontWeight: "bold",
+            background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Klant bewerken
+        </Typography>
+        <ClientForm client={client} />
+      </Box>
+    </Container>
   );
 }

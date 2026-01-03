@@ -2,17 +2,19 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
+  Paper,
+  Box,
+  Typography,
+  TextField,
+  FormControl,
+  InputLabel,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  MenuItem,
+  Button,
+  CircularProgress,
+} from "@mui/material";
+import { InfoIcon } from "@/components/info-icon";
 import { createProject, updateProject } from "@/app/actions/projects";
 import { useRouter } from "next/navigation";
 
@@ -35,8 +37,17 @@ interface ProjectFormProps {
 function SubmitButton({ isEdit }: { isEdit: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "Opslaan..." : isEdit ? "Bijwerken" : "Aanmaken"}
+    <Button type="submit" disabled={pending} variant="contained">
+      {pending ? (
+        <>
+          <CircularProgress size={16} sx={{ mr: 1 }} />
+          Opslaan...
+        </>
+      ) : isEdit ? (
+        "Bijwerken"
+      ) : (
+        "Aanmaken"
+      )}
     </Button>
   );
 }
@@ -69,119 +80,136 @@ export function ProjectForm({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEdit ? "Project bewerken" : "Nieuw project"}</CardTitle>
-        <CardDescription>
-          {isEdit
-            ? "Wijzig de instellingen van dit project"
-            : "Voeg een nieuw project toe aan een klant"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-4">
-        <form action={formAction} className="space-y-4">
-          <div className="space-y-2 max-w-md">
-            <Label htmlFor="client_id" className="text-sm text-slate-900">Klant *</Label>
+    <Paper elevation={1} sx={{ p: 3 }}>
+      <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+        {isEdit ? "Project bewerken" : "Nieuw project"}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        {isEdit
+          ? "Wijzig de instellingen van dit project"
+          : "Voeg een nieuw project toe aan een klant"}
+      </Typography>
+      <Box component="form" action={formAction} sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+            <Typography variant="body2" fontWeight={500}>
+              Klant <span style={{ color: "red" }}>*</span>
+            </Typography>
+            <InfoIcon title="Selecteer de klant waaraan dit project gekoppeld is. Dit kan niet worden gewijzigd na het aanmaken." size="small" />
+          </Box>
+          <FormControl fullWidth required sx={{ maxWidth: 400 }} disabled={isEdit}>
+            <InputLabel id="client-id-label">Klant *</InputLabel>
             <Select
+              labelId="client-id-label"
+              id="client_id"
               name="client_id"
+              label="Klant *"
               defaultValue={project?.client_id || defaultClientId || ""}
               required
-              disabled={isEdit}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecteer klant" />
-              </SelectTrigger>
-              <SelectContent>
-                {clients.map((client) => (
-                  <SelectItem key={client.id} value={client.id}>
-                    {client.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              {clients.map((client) => (
+                <MenuItem key={client.id} value={client.id}>
+                  {client.name}
+                </MenuItem>
+              ))}
             </Select>
-          </div>
+          </FormControl>
+        </Box>
 
-          <div className="space-y-2 max-w-md">
-            <Label htmlFor="name" className="text-sm text-slate-900">Naam *</Label>
-            <Input
-              id="name"
-              name="name"
-              defaultValue={project?.name}
-              required
-              placeholder="Project naam"
-            />
-          </div>
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+            <Typography variant="body2" fontWeight={500}>
+              Naam <span style={{ color: "red" }}>*</span>
+            </Typography>
+            <InfoIcon title="De naam van het project. Dit wordt gebruikt in tijdregistraties en exports." size="small" />
+          </Box>
+          <TextField
+            id="name"
+            name="name"
+            defaultValue={project?.name}
+            required
+            placeholder="Project naam"
+            fullWidth
+            sx={{ maxWidth: 400 }}
+          />
+        </Box>
 
-          <div className="space-y-2 max-w-md">
-            <Label htmlFor="rate_ex_btw" className="text-sm text-slate-900">Tarief (ex BTW)</Label>
-            <Input
-              id="rate_ex_btw"
-              name="rate_ex_btw"
-              type="number"
-              step="0.01"
-              min="0"
-              defaultValue={project?.rate_ex_btw || ""}
-              placeholder="0.00"
-            />
-            <p className="text-xs text-slate-500">
-              Intern tarief, niet zichtbaar in exports
-            </p>
-          </div>
+        <Box sx={{ maxWidth: 400 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+            <Typography variant="body2" fontWeight={500}>
+              Tarief (ex BTW)
+            </Typography>
+            <InfoIcon title="Optioneel: intern tarief per standaard unit. Bijvoorbeeld: als standaard unit 'uur' is en tarief €75, dan is het tarief €75 per uur. Dit wordt niet getoond in exports." size="small" />
+          </Box>
+          <TextField
+            id="rate_ex_btw"
+            name="rate_ex_btw"
+            type="number"
+            inputProps={{ step: "0.01", min: "0" }}
+            defaultValue={project?.rate_ex_btw || ""}
+            placeholder="0.00"
+            fullWidth
+          />
+        </Box>
 
-          <div className="space-y-2 max-w-md">
-            <Label htmlFor="default_unit" className="text-sm text-slate-900">Standaard Unit *</Label>
+        <Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+            <Typography variant="body2" fontWeight={500}>
+              Standaard Unit <span style={{ color: "red" }}>*</span>
+            </Typography>
+            <InfoIcon title="De standaard eenheid voor dit project. Wanneer je een tijdentry maakt voor dit project, wordt deze unit automatisch geselecteerd. Kies de unit die het meest gebruikt wordt voor dit project." size="small" />
+          </Box>
+          <FormControl fullWidth required sx={{ maxWidth: 400 }}>
+            <InputLabel id="default-unit-label">Standaard Unit *</InputLabel>
             <Select
+              labelId="default-unit-label"
+              id="default_unit"
               name="default_unit"
+              label="Standaard Unit *"
               defaultValue={project?.default_unit || "minutes"}
               required
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="minutes">Minuten</SelectItem>
-                <SelectItem value="quarter">Kwartier</SelectItem>
-                <SelectItem value="hour">Uur</SelectItem>
-                <SelectItem value="day">Dag</SelectItem>
-              </SelectContent>
+              <MenuItem value="minutes">Minuten</MenuItem>
+              <MenuItem value="quarter">Kwartier</MenuItem>
+              <MenuItem value="hour">Uur</MenuItem>
+              <MenuItem value="day">Dag</MenuItem>
             </Select>
-          </div>
+          </FormControl>
+        </Box>
 
-          <div className="space-y-2 max-w-md">
-            <Label htmlFor="rounding_rule" className="text-sm text-slate-900">Afrondingsregel *</Label>
+        <Box sx={{ maxWidth: 400 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+            <Typography variant="body2" fontWeight={500}>
+              Afrondingsregel <span style={{ color: "red" }}>*</span>
+            </Typography>
+            <InfoIcon title="Hoe tijdentries worden afgerond bij het opslaan. Geen afronding: exacte tijd. Nearest15: naar dichtstbijzijnde 15 minuten. Up15: altijd naar boven naar 15 minuten. Down15: altijd naar beneden naar 15 minuten." size="small" />
+          </Box>
+          <FormControl fullWidth required>
+            <InputLabel id="rounding-rule-label">Afrondingsregel *</InputLabel>
             <Select
+              labelId="rounding-rule-label"
+              id="rounding_rule"
               name="rounding_rule"
+              label="Afrondingsregel *"
               defaultValue={project?.rounding_rule || "none"}
               required
             >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Geen afronding</SelectItem>
-                <SelectItem value="nearest15">Naar dichtstbijzijnde 15 min</SelectItem>
-                <SelectItem value="up15">Naar boven afronden (15 min)</SelectItem>
-                <SelectItem value="down15">Naar beneden afronden (15 min)</SelectItem>
-              </SelectContent>
+              <MenuItem value="none">Geen afronding</MenuItem>
+              <MenuItem value="nearest15">Naar dichtstbijzijnde 15 min</MenuItem>
+              <MenuItem value="up15">Naar boven afronden (15 min)</MenuItem>
+              <MenuItem value="down15">Naar beneden afronden (15 min)</MenuItem>
             </Select>
-            <p className="text-xs text-slate-500">
-              Wordt toegepast bij het opslaan van tijdentries
-            </p>
-          </div>
+          </FormControl>
+        </Box>
 
-          <div className="flex gap-2">
-            <SubmitButton isEdit={isEdit} />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-            >
-              Annuleren
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <SubmitButton isEdit={isEdit} />
+          <Button type="button" variant="outlined" onClick={() => router.back()}>
+            Annuleren
+          </Button>
+        </Box>
+      </Box>
+    </Paper>
   );
 }
 

@@ -1,7 +1,12 @@
 // app/(dashboard)/projects/[id]/page.tsx
 import { getProject } from "@/app/actions/projects";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import {
+  Container,
+  Box,
+  Typography,
+  Button,
+  Paper,
+} from "@mui/material";
 import { Edit } from "@mui/icons-material";
 import Link from "next/link";
 
@@ -15,47 +20,63 @@ export default async function ProjectDetailPage({
   const project = await getProject(id);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{project.name}</h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Klant: {(project as any).clients?.name || "-"}
-          </p>
-        </div>
-        <Link href={`/projects/${id}/edit`}>
-          <Button variant="outline">
-            <Edit />
-            Bewerken
-          </Button>
-        </Link>
-      </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Page Header */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Box>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                fontWeight: "bold",
+                background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              {project.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Klant: {(project as any).clients?.name || "-"}
+            </Typography>
+          </Box>
+          <Link href={`/projects/${id}/edit`} style={{ textDecoration: "none" }}>
+            <Button variant="outlined" startIcon={<Edit />}>
+              Bewerken
+            </Button>
+          </Link>
+        </Box>
 
-      {/* Content Card */}
-      <Card>
-        <CardHeader className="p-4">
-          <CardTitle className="text-lg font-medium text-slate-900">Project Details</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Tarief (ex BTW)</p>
-              <p className="text-sm text-slate-900">
+        {/* Content Card */}
+        <Paper elevation={1} sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Project Details
+          </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Tarief (ex BTW)
+              </Typography>
+              <Typography variant="body1">
                 {project.rate_ex_btw ? `€${project.rate_ex_btw.toFixed(2)}` : "Niet ingesteld"}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Standaard Unit</p>
-              <p className="text-sm text-slate-900">{project.default_unit}</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600 mb-1">Afrondingsregel</p>
-              <p className="text-sm text-slate-900">{project.rounding_rule}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Standaard Unit
+              </Typography>
+              <Typography variant="body1">{project.default_unit}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                Afrondingsregel
+              </Typography>
+              <Typography variant="body1">{project.rounding_rule}</Typography>
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+    </Container>
   );
 }

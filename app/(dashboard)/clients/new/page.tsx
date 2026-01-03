@@ -1,18 +1,25 @@
 // app/(dashboard)/clients/new/page.tsx
+import { Container, Box, Typography } from "@mui/material";
 import { ClientForm } from "@/components/client-form";
 
 export default function NewClientPage() {
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Nieuwe Klant</h1>
-        </div>
-      </div>
-
-      {/* Content Card */}
-      <ClientForm />
-    </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontWeight: "bold",
+            background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Nieuwe Klant
+        </Typography>
+        <ClientForm />
+      </Box>
+    </Container>
   );
 }

@@ -17,6 +17,14 @@ import {
   Settings,
 } from "@mui/icons-material";
 
+interface TimerSession {
+  durationMinutes: number;
+  clientId: string;
+  projectId: string;
+  description: string;
+  timestamp: number;
+}
+
 interface TimerState {
   isRunning: boolean;
   startTime: number | null;
@@ -24,6 +32,7 @@ interface TimerState {
   clientId: string | null;
   projectId: string | null;
   description: string;
+  sessions: TimerSession[]; // Accumulated sessions
 }
 
 const TIMER_STORAGE_KEY = "kleinekoning_timer";
@@ -39,6 +48,7 @@ export function Timer({
     clientId: string;
     projectId: string;
     description: string;
+    sessions?: TimerSession[];
   }) => void;
   onSetup?: () => void;
   clients: Array<{ id: string; name: string }>;
@@ -56,9 +66,13 @@ export function Timer({
               ...parsed,
               elapsedSeconds: parsed.elapsedSeconds + elapsed,
               startTime: Date.now(),
+              sessions: parsed.sessions || [],
             };
           }
-          return parsed;
+          return {
+            ...parsed,
+            sessions: parsed.sessions || [],
+          };
         } catch {
           // Invalid JSON
         }
@@ -71,6 +85,7 @@ export function Timer({
       clientId: null,
       projectId: null,
       description: "",
+      sessions: [],
     };
   });
 
@@ -131,6 +146,7 @@ export function Timer({
               clientId: parsed.clientId,
               projectId: parsed.projectId,
               description: parsed.description,
+              sessions: parsed.sessions || prev.sessions || [],
             }));
           } catch {
             // Ignore
@@ -151,20 +167,46 @@ export function Timer({
   const handleStop = () => {
     if (!timerState.isRunning) return;
     
+    // Calculate current session time
+    const currentElapsed = timerState.startTime 
+      ? Math.floor((Date.now() - timerState.startTime) / 1000)
+      : 0;
+    const currentMinutes = Math.floor((timerState.elapsedSeconds + currentElapsed) / 60);
+    
+    // Combine all sessions including current one
+    const allSessions = [...(timerState.sessions || [])];
+    if (currentMinutes > 0 && timerState.clientId && timerState.projectId) {
+      allSessions.push({
+        durationMinutes: currentMinutes,
+        clientId: timerState.clientId,
+        projectId: timerState.projectId,
+        description: timerState.description,
+        timestamp: Date.now(),
+      });
+    }
+    
+    // Reset timer but KEEP client, project, and description for next start
     setTimerState((prev) => ({
       ...prev,
       isRunning: false,
       startTime: null,
+      elapsedSeconds: 0,
+      sessions: [], // Clear accumulated sessions after saving
     }));
 
-    const totalMinutes = Math.floor(timerState.elapsedSeconds / 60);
-    
-    if (totalMinutes > 0 && timerState.clientId && timerState.projectId) {
+    // Pass all sessions to onStop (will be handled in stop dialog)
+    if (allSessions.length > 0) {
+      // For now, combine all sessions into one entry
+      // The stop dialog will handle showing options
+      const totalMinutes = allSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
+      const lastSession = allSessions[allSessions.length - 1];
+      
       onStop({
         durationMinutes: totalMinutes,
-        clientId: timerState.clientId,
-        projectId: timerState.projectId,
-        description: timerState.description,
+        clientId: lastSession.clientId,
+        projectId: lastSession.projectId,
+        description: lastSession.description,
+        sessions: allSessions, // Pass all sessions for later use
       });
     }
   };
@@ -177,6 +219,7 @@ export function Timer({
       clientId: null,
       projectId: null,
       description: "",
+      sessions: [],
     });
     if (typeof window !== "undefined") {
       localStorage.removeItem(TIMER_STORAGE_KEY);

@@ -149,3 +149,37 @@ export async function updateStatementPdfUrl(statementId: string, pdfUrl: string)
   revalidatePath("/exports");
 }
 
+export async function deleteStatement(id: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Not authenticated");
+  }
+
+  // Delete statement lines first (cascade should handle this, but being explicit)
+  const { error: linesError } = await supabase
+    .from("statement_lines")
+    .delete()
+    .eq("statement_id", id);
+
+  if (linesError) {
+    throw linesError;
+  }
+
+  // Delete statement
+  const { error } = await supabase
+    .from("statements")
+    .delete()
+    .eq("id", id)
+    .eq("owner_user_id", user.id);
+
+  if (error) {
+    throw error;
+  }
+
+  revalidatePath("/exports");
+}
+

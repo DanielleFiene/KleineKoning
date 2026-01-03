@@ -37,6 +37,23 @@ export function TimerSetupDialog({
   const [description, setDescription] = useState<string>("");
   const [projects, setProjects] = useState<any[]>([]);
 
+  // Load current timer state when dialog opens
+  useEffect(() => {
+    if (open && typeof window !== "undefined") {
+      const saved = localStorage.getItem("kleinekoning_timer");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.clientId) setSelectedClient(parsed.clientId);
+          if (parsed.projectId) setSelectedProject(parsed.projectId);
+          if (parsed.description) setDescription(parsed.description);
+        } catch {
+          // Ignore
+        }
+      }
+    }
+  }, [open]);
+
   useEffect(() => {
     if (selectedClient) {
       fetch(`/api/projects?client_id=${selectedClient}`)
@@ -61,9 +78,10 @@ export function TimerSetupDialog({
       description: description.trim(),
     });
 
-    setSelectedClient("");
-    setSelectedProject("");
-    setDescription("");
+    // Don't clear fields - keep them for next time so user can quickly start again!
+    // setSelectedClient("");
+    // setSelectedProject("");
+    // setDescription("");
     onOpenChange(false);
   };
 

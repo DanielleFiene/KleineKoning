@@ -1,6 +1,19 @@
 // app/api/generate-pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { format } from "date-fns";
+import { nl } from "date-fns/locale";
+
+// Helper function to format date string (YYYY-MM-DD) to readable format
+function formatDate(dateStr: string): string {
+  try {
+    const [year, month, day] = dateStr.split("-").map(Number);
+    const date = new Date(year, month - 1, day);
+    return format(date, "d MMMM yyyy", { locale: nl });
+  } catch {
+    return dateStr;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -98,7 +111,7 @@ export async function POST(request: NextRequest) {
             <h1>Urenstaat</h1>
             <p><strong>Klant:</strong> ${clientName}</p>
             <p><strong>Statementnummer:</strong> ${statementNumber}</p>
-            <p><strong>Periode:</strong> ${new Date(periodStart).toLocaleDateString("nl-NL")} - ${new Date(periodEnd).toLocaleDateString("nl-NL")}</p>
+            <p><strong>Periode:</strong> ${formatDate(periodStart)} - ${formatDate(periodEnd)}</p>
             <p><strong>Opgesteld op:</strong> ${new Date().toLocaleDateString("nl-NL")}</p>
           </div>
 
@@ -110,12 +123,7 @@ export async function POST(request: NextRequest) {
               );
               return `
                 <div class="day-header">
-                  ${new Date(date).toLocaleDateString("nl-NL", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
+                  ${formatDate(date)}
                 </div>
                 <table>
                   <thead>
@@ -173,26 +181,46 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await blob.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Supabase Storage
-    // Path must include user ID folder to match storage policy: auth.uid()::text = (storage.foldername(name))[1]
-    const fileName = `${user.id}/${statementId}.html`;
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("statements")
-      .upload(fileName, buffer, {
-        contentType: "text/html",
-        upsert: true,
-      });
+    // Try to upload to Supabase Storage, fallback to data URL if bucket doesn't exist
+    let pdfUrl: string;
+    
+    try {
+      // Path must include user ID folder to match storage policy: auth.uid()::text = (storage.foldername(name))[1]
+      const fileName = `${user.id}/${statementId}.html`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("statements")
+        .upload(fileName, buffer, {
+          contentType: "text/html",
+          upsert: true,
+        });
 
-    if (uploadError) {
-      throw uploadError;
+      if (uploadError) {
+        // If bucket doesn't exist, use data URL instead
+        if (uploadError.message?.includes("Bucket not found") || uploadError.message?.includes("bucket")) {
+          console.warn("Storage bucket 'statements' not found, using data URL instead");
+          const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+          return NextResponse.json({ pdfUrl: dataUrl });
+        }
+        throw uploadError;
+      }
+
+      // Get public URL
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("statements").getPublicUrl(fileName);
+      
+      pdfUrl = publicUrl;
+    } catch (error: any) {
+      // Fallback to data URL if storage fails
+      if (error.message?.includes("Bucket not found") || error.message?.includes("bucket")) {
+        console.warn("Storage bucket 'statements' not found, using data URL instead");
+        const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+        return NextResponse.json({ pdfUrl: dataUrl });
+      }
+      throw error;
     }
 
-    // Get public URL
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from("statements").getPublicUrl(fileName);
-
-    return NextResponse.json({ pdfUrl: publicUrl });
+    return NextResponse.json({ pdfUrl });
   } catch (error) {
     console.error("PDF generation error:", error);
     return NextResponse.json(

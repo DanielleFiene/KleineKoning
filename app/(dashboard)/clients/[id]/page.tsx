@@ -1,18 +1,22 @@
 // app/(dashboard)/clients/[id]/page.tsx
 import { getClient } from "@/app/actions/clients";
 import { getProjectsByClient } from "@/app/actions/projects";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Add, Edit } from "@mui/icons-material";
-import Link from "next/link";
 import {
+  Container,
+  Box,
+  Typography,
+  Button,
+  Paper,
   Table,
   TableBody,
   TableCell,
+  TableContainer,
   TableHead,
-  TableHeader,
   TableRow,
-} from "@/components/ui/table";
+  IconButton,
+} from "@mui/material";
+import { Add, Edit } from "@mui/icons-material";
+import Link from "next/link";
 
 export default async function ClientDetailPage({
   params,
@@ -25,81 +29,104 @@ export default async function ClientDetailPage({
   const projects = await getProjectsByClient(id);
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{client.name}</h1>
-          <p className="text-sm text-slate-600 mt-1">
-            BTW Profiel: {client.btw_profile.label} ({client.btw_profile.percentage}%)
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href={`/clients/${id}/edit`}>
-            <Button variant="outline">
-              <Edit />
-              Bewerken
-            </Button>
-          </Link>
-          <Link href={`/projects/new?client_id=${id}`}>
-            <Button>
-              <Add />
-              Nieuw Project
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Page Header */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <Box>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                fontWeight: "bold",
+                background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              {client.name}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              BTW Profiel: {client.btw_profile.label} ({client.btw_profile.percentage}%)
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", gap: 2 }}>
+            <Link href={`/clients/${id}/edit`} style={{ textDecoration: "none" }}>
+              <Button variant="outlined" startIcon={<Edit />}>
+                Bewerken
+              </Button>
+            </Link>
+            <Link href={`/projects/new?client_id=${id}`} style={{ textDecoration: "none" }}>
+              <Button variant="contained" startIcon={<Add />}>
+                Nieuw Project
+              </Button>
+            </Link>
+          </Box>
+        </Box>
 
-      {/* Content Card */}
-      <Card>
-        <CardHeader className="p-4">
-          <CardTitle className="text-lg font-medium text-slate-900">Projecten</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4">
+        {/* Content Card */}
+        <Paper elevation={1} sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Projecten
+          </Typography>
           {projects.length === 0 ? (
-            <p className="text-sm text-slate-600">
+            <Typography variant="body2" color="text.secondary">
               Nog geen projecten voor deze klant
-            </p>
+            </Typography>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Naam</TableHead>
-                  <TableHead className="text-right">Tarief (ex BTW)</TableHead>
-                  <TableHead>Unit</TableHead>
-                  <TableHead>Afronding</TableHead>
-                  <TableHead>Acties</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {projects.map((project) => (
-                  <TableRow key={project.id}>
-                    <TableCell className="text-sm text-slate-900">
-                      <Link href={`/projects/${project.id}`} className="hover:text-indigo-600">
-                        {project.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-900 text-right">
-                      {project.rate_ex_btw
-                        ? `€${project.rate_ex_btw.toFixed(2)}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-900">{project.default_unit}</TableCell>
-                    <TableCell className="text-sm text-slate-900">{project.rounding_rule}</TableCell>
-                    <TableCell>
-                      <Link href={`/projects/${project.id}/edit`}>
-                        <Button variant="ghost" size="sm">
-                          <Edit />
-                        </Button>
-                      </Link>
-                    </TableCell>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600 }}>Naam</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>Tarief (ex BTW)</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Afronding</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Acties</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHead>
+                <TableBody>
+                  {projects.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell>
+                        <Link
+                          href={`/projects/${project.id}`}
+                          style={{ textDecoration: "none" }}
+                        >
+                          <Typography
+                            sx={{
+                              color: "primary.main",
+                              "&:hover": {
+                                textDecoration: "underline",
+                              },
+                            }}
+                          >
+                            {project.name}
+                          </Typography>
+                        </Link>
+                      </TableCell>
+                      <TableCell align="right">
+                        {project.rate_ex_btw
+                          ? `€${project.rate_ex_btw.toFixed(2)}`
+                          : "-"}
+                      </TableCell>
+                      <TableCell>{project.default_unit}</TableCell>
+                      <TableCell>{project.rounding_rule}</TableCell>
+                      <TableCell>
+                        <Link href={`/projects/${project.id}/edit`} style={{ textDecoration: "none" }}>
+                          <IconButton size="small" title="Bewerken">
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </Paper>
+      </Box>
+    </Container>
   );
 }

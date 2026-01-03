@@ -50,7 +50,7 @@ export default function LoginPage() {
               priority
             />
           </div>
-          <h1 className="mb-1 text-3xl font-bold tracking-tight">KleineKoning</h1>
+          <h1 className="mb-1 text-3xl font-bold tracking-tight">Kleine Koning</h1>
           <p className="text-sm text-muted-foreground">Tijdregistratie en urenstaat</p>
         </div>
 

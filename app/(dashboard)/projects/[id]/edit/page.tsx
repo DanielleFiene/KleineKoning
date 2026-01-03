@@ -1,6 +1,7 @@
 // app/(dashboard)/projects/[id]/edit/page.tsx
 import { getProject, getProjects } from "@/app/actions/projects";
 import { getClients } from "@/app/actions/clients";
+import { Container, Box, Typography } from "@mui/material";
 import { ProjectForm } from "@/components/project-form";
 
 export default async function EditProjectPage({
@@ -14,26 +15,32 @@ export default async function EditProjectPage({
   const clients = await getClients();
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Project bewerken</h1>
-        </div>
-      </div>
-
-      {/* Content Card */}
-      <ProjectForm
-        clients={clients}
-        project={{
-          id: project.id,
-          client_id: project.client_id,
-          name: project.name,
-          rate_ex_btw: project.rate_ex_btw,
-          default_unit: project.default_unit,
-          rounding_rule: project.rounding_rule,
-        }}
-      />
-    </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontWeight: "bold",
+            background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Project bewerken
+        </Typography>
+        <ProjectForm
+          clients={clients}
+          project={{
+            id: project.id,
+            client_id: project.client_id,
+            name: project.name,
+            rate_ex_btw: project.rate_ex_btw,
+            default_unit: project.default_unit,
+            rounding_rule: project.rounding_rule,
+          }}
+        />
+      </Box>
+    </Container>
   );
 }

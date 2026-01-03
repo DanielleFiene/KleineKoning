@@ -1,47 +1,50 @@
 // app/(dashboard)/clients/page.tsx
-import { getClients } from "@/app/actions/clients";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { getClientsWithStats } from "@/app/actions/clients";
+import { Container, Box, Typography, Button, Paper, Tooltip } from "@mui/material";
+import { Add, Info } from "@mui/icons-material";
 import Link from "next/link";
-import { Add, Search } from "@mui/icons-material";
 import { ClientSearch } from "@/components/client-search";
 
 export default async function ClientsPage() {
-  const clients = await getClients();
+  const clients = await getClientsWithStats();
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Klanten</h1>
-        </div>
-        <Link href="/clients/new">
-          <Button>
-            <Add />
-            Nieuwe Klant
-          </Button>
-        </Link>
-      </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Page Header */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                fontWeight: "bold",
+                background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Klanten
+            </Typography>
+            <Tooltip title="Beheer je klanten. Voeg klanten toe, bewerk BTW-profielen en tarieven. Voor internationale klanten kun je een handmatig tarief instellen.">
+              <Info sx={{ color: "text.secondary", fontSize: 20, cursor: "help" }} />
+            </Tooltip>
+          </Box>
+          <Link href="/clients/new" style={{ textDecoration: "none" }}>
+            <Button variant="contained" startIcon={<Add />}>
+              Nieuwe Klant
+            </Button>
+          </Link>
+        </Box>
 
-      {/* Content Card */}
-      <Card>
-        <CardHeader className="p-4">
-          <CardTitle className="text-lg font-medium text-slate-900">Klantenlijst</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4">
+        {/* Content Card */}
+        <Paper elevation={1} sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Klantenlijst
+          </Typography>
           <ClientSearch initialClients={clients} />
-        </CardContent>
-      </Card>
-    </div>
+        </Paper>
+      </Box>
+    </Container>
   );
 }

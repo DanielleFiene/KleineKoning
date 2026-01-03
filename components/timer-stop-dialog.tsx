@@ -11,7 +11,18 @@ import {
   Box,
   Paper,
   Typography,
+  FormControlLabel,
+  Checkbox,
+  Chip,
 } from "@mui/material";
+
+interface TimerSession {
+  durationMinutes: number;
+  clientId: string;
+  projectId: string;
+  description: string;
+  timestamp: number;
+}
 
 interface TimerStopDialogProps {
   open: boolean;
@@ -20,10 +31,12 @@ interface TimerStopDialogProps {
   clientName: string;
   projectName: string;
   roundingRule: "none" | "nearest15" | "up15" | "down15";
+  sessions?: TimerSession[];
   onSave: (data: {
     date: string;
     description: string;
     durationMinutes: number;
+    saveForLater?: boolean;
   }) => void;
 }
 
@@ -59,15 +72,23 @@ export function TimerStopDialog({
   clientName,
   projectName,
   roundingRule,
+  sessions = [],
   onSave,
 }: TimerStopDialogProps) {
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  });
   const [description, setDescription] = useState("");
+  const [saveForLater, setSaveForLater] = useState(false);
 
   const roundedMinutes = applyRounding(durationMinutes, roundingRule);
   const wasRounded = roundedMinutes !== durationMinutes;
 
-  const handleSave = () => {
+  const handleSave = (forLater: boolean = false) => {
     if (!description.trim()) {
       alert("Vul een omschrijving in");
       return;
@@ -77,10 +98,16 @@ export function TimerStopDialog({
       date,
       description: description.trim(),
       durationMinutes: roundedMinutes,
+      saveForLater: forLater,
     });
 
-    setDate(new Date().toISOString().split("T")[0]);
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    setDate(`${year}-${month}-${day}`);
     setDescription("");
+    setSaveForLater(false);
     onOpenChange(false);
   };
 
@@ -103,6 +130,23 @@ export function TimerStopDialog({
                 <Typography variant="body2" color="text.secondary">Duur:</Typography>
                 <Typography variant="body2" fontWeight="medium">{formatDuration(roundedMinutes)}</Typography>
               </Box>
+              {sessions.length > 1 && (
+                <Box sx={{ pt: 1, mt: 1, borderTop: 1, borderColor: "divider" }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+                    {sessions.length} sessies opgeteld:
+                  </Typography>
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {sessions.map((session, idx) => (
+                      <Chip
+                        key={idx}
+                        label={`${formatDuration(session.durationMinutes)}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              )}
               {wasRounded && (
                 <Box sx={{ pt: 1, mt: 1, borderTop: 1, borderColor: "divider" }}>
                   <Typography variant="caption" color="text.secondary">
@@ -136,15 +180,39 @@ export function TimerStopDialog({
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                handleSave();
+                handleSave(false);
               }
             }}
+          />
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={saveForLater}
+                onChange={(e) => setSaveForLater(e.target.checked)}
+              />
+            }
+            label={
+              <Box>
+                <Typography variant="body2" fontWeight={500}>
+                  Opslaan voor deze dag (later exporteren)
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  De entry wordt opgeslagen maar niet direct toegevoegd aan de tijdregistratie. Je kunt deze later exporteren.
+                </Typography>
+              </Box>
+            }
           />
         </Box>
       </DialogContent>
       <DialogActions>
         <Button onClick={() => onOpenChange(false)}>Annuleren</Button>
-        <Button onClick={handleSave} variant="contained">Opslaan</Button>
+        <Button onClick={() => handleSave(true)} variant="outlined" color="secondary">
+          Opslaan voor later
+        </Button>
+        <Button onClick={() => handleSave(false)} variant="contained">
+          Direct opslaan
+        </Button>
       </DialogActions>
     </Dialog>
   );

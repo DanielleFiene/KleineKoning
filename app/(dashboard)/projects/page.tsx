@@ -1,74 +1,52 @@
 // app/(dashboard)/projects/page.tsx
-import { getProjects } from "@/app/actions/projects";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { getProjectsWithStats } from "@/app/actions/projects";
+import { getClients } from "@/app/actions/clients";
+import { Container, Box, Typography, Button, Paper, Tooltip } from "@mui/material";
+import { Add, Info } from "@mui/icons-material";
 import Link from "next/link";
+import { ProjectSearch } from "@/components/project-search";
 
 export default async function ProjectsPage() {
-  const projects = await getProjects();
+  const projects = await getProjectsWithStats();
+  const clients = await getClients();
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Projecten</h1>
-        </div>
-      </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Page Header */}
+        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                fontWeight: "bold",
+                background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+              }}
+            >
+              Projecten
+            </Typography>
+            <Tooltip title="Beheer je projecten per klant. Stel standaard units in (minuten/kwartier/uur/dag), afrondingsregels en optionele tarieven. Het tarief is per standaard unit (bijv. €75/uur).">
+              <Info sx={{ color: "text.secondary", fontSize: 20, cursor: "help" }} />
+            </Tooltip>
+          </Box>
+          <Link href="/projects/new" style={{ textDecoration: "none" }}>
+            <Button variant="contained" startIcon={<Add />}>
+              Nieuw Project
+            </Button>
+          </Link>
+        </Box>
 
-      {/* Content Card */}
-      <Card>
-        <CardHeader className="p-4">
-          <CardTitle className="text-lg font-medium text-slate-900">Alle Projecten</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4">
-          {projects.length === 0 ? (
-            <p className="text-sm text-slate-600">
-              Nog geen projecten toegevoegd
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="bg-slate-100">Naam</TableHead>
-                  <TableHead className="bg-slate-100">Klant</TableHead>
-                  <TableHead className="bg-slate-100 text-right">Tarief (ex BTW)</TableHead>
-                  <TableHead className="bg-slate-100">Unit</TableHead>
-                  <TableHead className="bg-slate-100">Afronding</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {projects.map((project: any) => (
-                  <TableRow key={project.id}>
-                    <TableCell className="text-sm text-slate-900">
-                      <Link href={`/projects/${project.id}`} className="hover:text-indigo-600">
-                        {project.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-900">
-                      {project.clients?.name || "-"}
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-900 text-right">
-                      {project.rate_ex_btw
-                        ? `€${project.rate_ex_btw.toFixed(2)}`
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-sm text-slate-900">{project.default_unit}</TableCell>
-                    <TableCell className="text-sm text-slate-900">{project.rounding_rule}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+        {/* Content Card */}
+        <Paper elevation={1} sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Alle Projecten
+          </Typography>
+          <ProjectSearch initialProjects={projects} clients={clients} />
+        </Paper>
+      </Box>
+    </Container>
   );
 }

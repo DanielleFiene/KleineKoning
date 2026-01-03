@@ -1,5 +1,6 @@
 // app/(dashboard)/projects/new/page.tsx
 import { getClients } from "@/app/actions/clients";
+import { Container, Box, Typography } from "@mui/material";
 import { ProjectForm } from "@/components/project-form";
 
 export default async function NewProjectPage({
@@ -12,16 +13,22 @@ export default async function NewProjectPage({
   const clients = await getClients();
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Nieuw Project</h1>
-        </div>
-      </div>
-
-      {/* Content Card */}
-      <ProjectForm clients={clients} defaultClientId={params.client_id} />
-    </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{
+            fontWeight: "bold",
+            background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          Nieuw Project
+        </Typography>
+        <ProjectForm clients={clients} defaultClientId={params.client_id} />
+      </Box>
+    </Container>
   );
 }
