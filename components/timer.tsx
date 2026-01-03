@@ -16,6 +16,7 @@ import {
   Refresh,
   Settings,
 } from "@mui/icons-material";
+import { useToast } from "@/components/toast-provider";
 
 interface TimerSession {
   durationMinutes: number;
@@ -54,6 +55,7 @@ export function Timer({
   clients: Array<{ id: string; name: string }>;
   projects: Array<{ id: string; name: string }>;
 }) {
+  const toast = useToast();
   const [timerState, setTimerState] = useState<TimerState>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(TIMER_STORAGE_KEY);
@@ -122,8 +124,6 @@ export function Timer({
     if (!timerState.clientId || !timerState.projectId) {
       if (onSetup) {
         onSetup();
-      } else {
-        alert("Selecteer eerst een klant en project");
       }
       return;
     }

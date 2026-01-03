@@ -15,6 +15,7 @@ import {
   Checkbox,
   Chip,
 } from "@mui/material";
+import { useToast } from "@/components/toast-provider";
 
 interface TimerSession {
   durationMinutes: number;
@@ -75,6 +76,7 @@ export function TimerStopDialog({
   sessions = [],
   onSave,
 }: TimerStopDialogProps) {
+  const toast = useToast();
   const [date, setDate] = useState(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -90,7 +92,7 @@ export function TimerStopDialog({
 
   const handleSave = (forLater: boolean = false) => {
     if (!description.trim()) {
-      alert("Vul een omschrijving in");
+      toast.showWarning("Vul een omschrijving in");
       return;
     }
 
@@ -116,7 +118,7 @@ export function TimerStopDialog({
       <DialogTitle>Timer entry opslaan</DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 2 }}>
-          <Paper sx={{ p: 2, backgroundColor: "grey.100" }}>
+          <Paper sx={{ p: 2, backgroundColor: "action.hover" }}>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
                 <Typography variant="body2" color="text.secondary">Klant:</Typography>
@@ -206,7 +208,7 @@ export function TimerStopDialog({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => onOpenChange(false)}>Annuleren</Button>
+        <Button onClick={() => onOpenChange(false)} sx={{ color: "text.primary" }}>Annuleren</Button>
         <Button onClick={() => handleSave(true)} variant="outlined" color="secondary">
           Opslaan voor later
         </Button>

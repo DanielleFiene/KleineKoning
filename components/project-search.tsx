@@ -33,6 +33,7 @@ import {
   Chip,
 } from "@mui/material";
 import { Edit, Delete, Search, GetApp, FilterList } from "@mui/icons-material";
+import { useToast } from "@/components/toast-provider";
 
 interface Project {
   id: string;
@@ -47,6 +48,7 @@ interface Project {
 }
 
 export function ProjectSearch({ initialProjects, clients }: { initialProjects: Project[]; clients: { id: string; name: string }[] }) {
+  const toast = useToast();
   const [search, setSearch] = useState("");
   const [projects, setProjects] = useState(initialProjects);
   const [sortBy, setSortBy] = useState<"name" | "client" | "hours" | "rate" | "activity">("name");
@@ -130,9 +132,10 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
       });
       setDeleteConfirmOpen(false);
       setProjectToDelete(null);
+      toast.showSuccess("Project verwijderd");
       router.refresh();
     } catch (error) {
-      alert("Fout bij verwijderen: " + (error as Error).message);
+      toast.showError("Fout bij verwijderen: " + (error as Error).message);
       setDeleteConfirmOpen(false);
       setProjectToDelete(null);
     }
@@ -147,9 +150,10 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
       await Promise.all(Array.from(selectedProjects).map((id) => deleteProject(id)));
       setProjects(projects.filter((p) => !selectedProjects.has(p.id)));
       setSelectedProjects(new Set());
+      toast.showSuccess(`${selectedProjects.size} project(en) verwijderd`);
       router.refresh();
     } catch (error) {
-      alert("Fout bij verwijderen: " + (error as Error).message);
+      toast.showError("Fout bij verwijderen: " + (error as Error).message);
     }
   };
 
@@ -187,8 +191,13 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
         project.lastActivity ? format(new Date(project.lastActivity), "d MMM yyyy", { locale: nl }) : "Nooit",
       ]);
     });
-    const csvContent = csvRows.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const csvContent = csvRows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    
+    // Add UTF-8 BOM for Excel compatibility (especially for euro sign)
+    const csvWithBom = "\uFEFF" + csvContent;
+    const blob = new Blob([csvWithBom], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `projecten_export_${format(new Date(), "yyyy-MM-dd")}.csv`;
@@ -439,7 +448,7 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Annuleren</Button>
+          <Button onClick={() => setDeleteConfirmOpen(false)} sx={{ color: "text.primary" }}>Annuleren</Button>
           <Button onClick={confirmDelete} color="error" variant="contained">
             Verwijderen
           </Button>

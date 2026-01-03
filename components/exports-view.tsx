@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { getTimeEntries } from "@/app/actions/time-entries";
 import { createStatement, updateStatementPdfUrl, deleteStatement, getStatement } from "@/app/actions/statements";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subYears, isAfter } from "date-fns";
@@ -42,6 +43,7 @@ import {
 } from "@mui/material";
 import { ContentCopy, Download, Delete, Search, Refresh, GetApp, Email, FilterList, Info, MoreVert, PictureAsPdf, Add } from "@mui/icons-material";
 import { InfoIcon } from "@/components/info-icon";
+import { useToast } from "@/components/toast-provider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -68,6 +70,8 @@ export function ExportsView({
   clients: Client[];
   initialStatements: Statement[];
 }) {
+  const router = useRouter();
+  const toast = useToast();
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [periodType, setPeriodType] = useState<"week" | "month" | "custom">("week");
   const [customStart, setCustomStart] = useState<Date | null>(null);
@@ -93,6 +97,7 @@ export function ExportsView({
   const [emailPreviewData, setEmailPreviewData] = useState<any>(null);
   const [statementMenuAnchor, setStatementMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedStatement, setSelectedStatement] = useState<Statement | null>(null);
+  const [selectedStatements, setSelectedStatements] = useState<Set<string>>(new Set());
 
   const calculatePeriod = () => {
     const today = getTodayDate();
@@ -128,12 +133,12 @@ export function ExportsView({
 
   const handlePreview = async () => {
     if (!selectedClient) {
-      alert("Selecteer een klant");
+      toast.showWarning("Selecteer een klant");
       return;
     }
 
     if (periodType === "custom" && (!customStart || !customEnd)) {
-      alert("Selecteer beide datums");
+      toast.showWarning("Selecteer beide datums");
       return;
     }
 
@@ -153,7 +158,7 @@ export function ExportsView({
         entries,
       });
     } catch (error) {
-      alert("Fout bij ophalen data: " + (error as Error).message);
+      toast.showError("Fout bij ophalen data: " + (error as Error).message);
     }
   };
 
@@ -172,7 +177,7 @@ export function ExportsView({
       );
 
       if (!client) {
-        alert("Fout: Klant niet gevonden");
+        toast.showError("Fout: Klant niet gevonden");
         setGenerating(false);
         return;
       }
@@ -206,19 +211,25 @@ export function ExportsView({
       setEmailStatementId(statement.id);
 
       // Download PDF directly
-      const link = document.createElement("a");
-      link.href = pdfUrl;
-      link.download = `urenstaat_${client.name.replace(/[^a-zA-Z0-9]/g, "_")}_${previewData.period.start}_${previewData.period.end}.html`;
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (pdfUrl.startsWith("data:application/pdf")) {
+        // Base64 PDF - download directly
+        const link = document.createElement("a");
+        link.href = pdfUrl;
+        link.download = `urenstaat_${client.name.replace(/[^a-zA-Z0-9]/g, "_")}_${previewData.period.start}_${previewData.period.end}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Storage URL - open in new tab (browser will download it)
+        window.open(pdfUrl, "_blank");
+      }
 
       const statementsResponse = await fetch("/api/statements");
       const newStatements = await statementsResponse.json();
       setStatements(newStatements);
+      toast.showSuccess("PDF gegenereerd");
     } catch (error) {
-      alert("Fout bij genereren PDF: " + (error as Error).message);
+      toast.showError("Fout bij genereren PDF: " + (error as Error).message);
     } finally {
       setGenerating(false);
     }
@@ -295,23 +306,61 @@ export function ExportsView({
       setStatements(statements.filter((s) => s.id !== statementToDelete));
       setDeleteConfirmOpen(false);
       setStatementToDelete(null);
+      toast.showSuccess("Statement verwijderd");
     } catch (error) {
-      alert("Fout bij verwijderen: " + (error as Error).message);
+      toast.showError("Fout bij verwijderen: " + (error as Error).message);
       setDeleteConfirmOpen(false);
       setStatementToDelete(null);
+    }
+  };
+
+  const handleSelectStatement = (statementId: string) => {
+    setSelectedStatements((prev) => {
+      const next = new Set(prev);
+      if (next.has(statementId)) {
+        next.delete(statementId);
+      } else {
+        next.add(statementId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllStatements = () => {
+    if (selectedStatements.size === filteredAndSortedStatements.length) {
+      setSelectedStatements(new Set());
+    } else {
+      setSelectedStatements(new Set(filteredAndSortedStatements.map((s) => s.id)));
+    }
+  };
+
+  const handleBulkDeleteStatements = async () => {
+    if (selectedStatements.size === 0) return;
+    if (!confirm(`Weet je zeker dat je ${selectedStatements.size} statement(s) wilt verwijderen?`)) {
+      return;
+    }
+    try {
+      await Promise.all(Array.from(selectedStatements).map((id) => deleteStatement(id)));
+      setStatements(statements.filter((s) => !selectedStatements.has(s.id)));
+      const count = selectedStatements.size;
+      setSelectedStatements(new Set());
+      toast.showSuccess(`${count} statement(s) verwijderd`);
+      router.refresh();
+    } catch (error) {
+      toast.showError("Fout bij verwijderen: " + (error as Error).message);
     }
   };
 
   // Quick action: Re-export last period
   const handleReexportLast = async () => {
     if (statements.length === 0) {
-      alert("Geen statements beschikbaar");
+      toast.showWarning("Geen statements beschikbaar");
       return;
     }
     const lastStatement = statements[0]; // Already sorted by date desc
     const clientId = clients.find((c) => c.name === lastStatement.clients.name)?.id;
     if (!clientId) {
-      alert("Klant niet gevonden");
+      toast.showError("Klant niet gevonden");
       return;
     }
     setSelectedClient(clientId);
@@ -330,7 +379,7 @@ export function ExportsView({
   const handleExportCSV = (statementData?: { entries: any[]; client: string; period: { start: string; end: string } }) => {
     const data = statementData || previewData;
     if (!data) {
-      alert("Geen data beschikbaar");
+      toast.showWarning("Geen data beschikbaar");
       return;
     }
     const csvRows = [];
@@ -374,7 +423,7 @@ export function ExportsView({
       // Get full statement with lines
       const fullStatement = await getStatement(selectedStatement.id);
       if (!fullStatement || !fullStatement.statement_lines) {
-        alert("Statement data niet gevonden");
+        toast.showError("Statement data niet gevonden");
         setGenerating(false);
         return;
       }
@@ -404,20 +453,26 @@ export function ExportsView({
       await updateStatementPdfUrl(selectedStatement.id, pdfUrl);
 
       // Download PDF directly
-      const link = document.createElement("a");
-      link.href = pdfUrl;
-      link.download = `urenstaat_${selectedStatement.clients.name.replace(/[^a-zA-Z0-9]/g, "_")}_${selectedStatement.period_start}_${selectedStatement.period_end}.html`;
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      if (pdfUrl.startsWith("data:application/pdf")) {
+        // Base64 PDF - download directly
+        const link = document.createElement("a");
+        link.href = pdfUrl;
+        link.download = `urenstaat_${selectedStatement.clients.name.replace(/[^a-zA-Z0-9]/g, "_")}_${selectedStatement.period_start}_${selectedStatement.period_end}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        // Storage URL - open in new tab (browser will download it)
+        window.open(pdfUrl, "_blank");
+      }
 
       // Refresh statements
       const statementsResponse = await fetch("/api/statements");
       const newStatements = await statementsResponse.json();
       setStatements(newStatements);
+      toast.showSuccess("PDF opnieuw gegenereerd");
     } catch (error) {
-      alert("Fout bij genereren PDF: " + (error as Error).message);
+      toast.showError("Fout bij genereren PDF: " + (error as Error).message);
     } finally {
       setGenerating(false);
     }
@@ -431,7 +486,7 @@ export function ExportsView({
     try {
       const fullStatement = await getStatement(selectedStatement.id);
       if (!fullStatement || !fullStatement.statement_lines) {
-        alert("Statement data niet gevonden");
+        toast.showError("Statement data niet gevonden");
         return;
       }
 
@@ -450,8 +505,9 @@ export function ExportsView({
           end: selectedStatement.period_end,
         },
       });
+      toast.showSuccess("CSV gedownload");
     } catch (error) {
-      alert("Fout bij exporteren CSV: " + (error as Error).message);
+      toast.showError("Fout bij exporteren CSV: " + (error as Error).message);
     }
   };
 
@@ -488,7 +544,7 @@ export function ExportsView({
       setEmailDialogOpen(true);
     } catch (error) {
       console.error("Error opening email dialog:", error);
-      alert("Fout bij openen email dialog: " + (error as Error).message);
+      toast.showError("Fout bij openen email dialog: " + (error as Error).message);
     }
   };
 
@@ -654,7 +710,7 @@ export function ExportsView({
               {format(parseDateString(previewData.period.end), "d MMM yyyy", { locale: nl })}
             </Typography>
             <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <Box sx={{ p: 2, backgroundColor: "grey.50", borderRadius: 1 }}>
+              <Box sx={{ p: 2, backgroundColor: "background.default", borderRadius: 1, border: 1, borderColor: "divider" }}>
                 <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Header</Typography>
                 <Typography variant="body2">Klant: {previewData.client}</Typography>
                 <Typography variant="body2">
@@ -677,7 +733,7 @@ export function ExportsView({
                     );
                     return (
                       <Box key={date} sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
-                        <Box sx={{ p: 2, backgroundColor: "grey.100", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Box sx={{ p: 2, backgroundColor: "action.hover", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <Typography variant="subtitle2" fontWeight={600}>
                             {format(new Date(date), "EEEE d MMMM", { locale: nl })}
                           </Typography>
@@ -843,6 +899,14 @@ export function ExportsView({
             </FormControl>
           </Box>
 
+          {selectedStatements.size > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Button variant="contained" color="error" onClick={handleBulkDeleteStatements} size="small">
+                Verwijder ({selectedStatements.size})
+              </Button>
+            </Box>
+          )}
+
           {filteredAndSortedStatements.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
               Nog geen statements gegenereerd
@@ -852,6 +916,13 @@ export function ExportsView({
               <Table>
                 <TableHead>
                   <TableRow>
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        indeterminate={selectedStatements.size > 0 && selectedStatements.size < filteredAndSortedStatements.length}
+                        checked={filteredAndSortedStatements.length > 0 && selectedStatements.size === filteredAndSortedStatements.length}
+                        onChange={handleSelectAllStatements}
+                      />
+                    </TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Statement #</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Klant</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Periode</TableCell>
@@ -861,7 +932,13 @@ export function ExportsView({
                 </TableHead>
                 <TableBody>
                   {filteredAndSortedStatements.map((statement) => (
-                    <TableRow key={statement.id}>
+                    <TableRow key={statement.id} selected={selectedStatements.has(statement.id)}>
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selectedStatements.has(statement.id)}
+                          onChange={() => handleSelectStatement(statement.id)}
+                        />
+                      </TableCell>
                       <TableCell>{statement.statement_number}</TableCell>
                       <TableCell>{statement.clients.name}</TableCell>
                       <TableCell>
@@ -899,7 +976,7 @@ export function ExportsView({
                                     // Create a short, clean URL
                                     const shortUrl = `${window.location.origin}/api/pdf/${statement.id}`;
                                     await navigator.clipboard.writeText(shortUrl);
-                                    alert("PDF link gekopieerd naar klembord!");
+                                    toast.showSuccess("PDF link gekopieerd naar klembord!");
                                   } catch (error) {
                                     // Fallback for older browsers or if clipboard API fails
                                     const shortUrl = `${window.location.origin}/api/pdf/${statement.id}`;
@@ -913,9 +990,9 @@ export function ExportsView({
                                     textArea.select();
                                     try {
                                       document.execCommand("copy");
-                                      alert("PDF link gekopieerd naar klembord!");
+                                      toast.showSuccess("PDF link gekopieerd naar klembord!");
                                     } catch (err) {
-                                      alert("Kon link niet kopiëren. Gebruik Ctrl+C op de link.");
+                                      toast.showError("Kon link niet kopiëren. Gebruik Ctrl+C op de link.");
                                     }
                                     document.body.removeChild(textArea);
                                   }
@@ -993,19 +1070,33 @@ export function ExportsView({
                     <Box
                       sx={{
                         p: 2,
-                        bgcolor: "warning.light",
+                        bgcolor: (theme) => theme.palette.mode === "dark" 
+                          ? "rgba(255, 152, 0, 0.2)" 
+                          : "rgba(255, 152, 0, 0.1)",
                         borderRadius: 1,
                         border: "1px solid",
                         borderColor: "warning.main",
                       }}
                     >
                       <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
-                        <Info sx={{ color: "warning.dark", mt: 0.5 }} />
+                        <Info sx={{ color: "warning.main", mt: 0.5 }} />
                         <Box>
-                          <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                          <Typography 
+                            variant="subtitle2" 
+                            sx={{ 
+                              fontWeight: 600, 
+                              mb: 0.5,
+                              color: "warning.dark",
+                            }}
+                          >
                             Waarschuwing: Bewaartermijn
                           </Typography>
-                          <Typography variant="body2">
+                          <Typography 
+                            variant="body2"
+                            sx={{
+                              color: "text.primary",
+                            }}
+                          >
                             Dit statement is minder dan 7 jaar oud. Volgens de Nederlandse wetgeving moeten facturen en urenstaten minimaal 7 jaar bewaard blijven voor de Belastingdienst. 
                             Het verwijderen van dit statement kan problemen veroorzaken bij een eventuele belastingcontrole.
                           </Typography>
@@ -1018,7 +1109,7 @@ export function ExportsView({
             })()}
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDeleteConfirmOpen(false)}>Annuleren</Button>
+            <Button onClick={() => setDeleteConfirmOpen(false)} sx={{ color: "text.primary" }}>Annuleren</Button>
             <Button onClick={confirmDelete} color="error" variant="contained">
               Verwijderen
             </Button>
@@ -1069,7 +1160,15 @@ export function ExportsView({
                   onClick={() => setEmailAddresses([...emailAddresses, ""])}
                   variant="outlined"
                   size="small"
-                  sx={{ mt: 1 }}
+                  sx={{ 
+                    mt: 1,
+                    color: "text.primary",
+                    borderColor: "divider",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                      backgroundColor: "action.hover",
+                    },
+                  }}
                 >
                   Email adres toevoegen
                 </Button>
@@ -1091,8 +1190,8 @@ export function ExportsView({
                 required
               />
               
-              <Box sx={{ mt: 2, p: 2, backgroundColor: "grey.50", borderRadius: 1 }}>
-                <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500 }}>
+              <Box sx={{ mt: 2, p: 2, backgroundColor: "background.default", border: 1, borderColor: "divider", borderRadius: 1 }}>
+                <Typography variant="body2" sx={{ mb: 1.5, fontWeight: 500, color: "text.primary" }}>
                   Wat meesturen?
                 </Typography>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
@@ -1104,6 +1203,7 @@ export function ExportsView({
                       />
                     }
                     label="PDF download link"
+                    sx={{ color: "text.primary" }}
                   />
                   <FormControlLabel
                     control={
@@ -1113,13 +1213,14 @@ export function ExportsView({
                       />
                     }
                     label="CSV download link"
+                    sx={{ color: "text.primary" }}
                   />
                 </Box>
               </Box>
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setEmailDialogOpen(false)}>Annuleren</Button>
+            <Button onClick={() => setEmailDialogOpen(false)} sx={{ color: "text.primary" }}>Annuleren</Button>
             <Button
               onClick={async () => {
                 // Filter valid email addresses
@@ -1128,11 +1229,11 @@ export function ExportsView({
                   .filter(email => email.length > 0 && email.includes("@"));
                 
                 if (validEmails.length === 0) {
-                  alert("Voer minimaal één geldig email adres in");
+                  toast.showWarning("Voer minimaal één geldig email adres in");
                   return;
                 }
                 if (!emailSubject || !emailBody) {
-                  alert("Vul onderwerp en bericht in");
+                  toast.showWarning("Vul onderwerp en bericht in");
                   return;
                 }
                 

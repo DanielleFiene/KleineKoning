@@ -10,6 +10,7 @@ import { getTodayString, getTodayDate, getCurrentWeekMonday, parseDateString } f
 import { Timer } from "@/components/timer";
 import { TimerSetupDialog } from "@/components/timer-setup-dialog";
 import { InfoIcon } from "@/components/info-icon";
+import { useToast } from "@/components/toast-provider";
 import {
   Box,
   Container,
@@ -34,6 +35,7 @@ import {
   DialogActions,
   TextField,
   Tooltip,
+  Checkbox,
 } from "@mui/material";
 import { ChevronLeft, ChevronRight, Add, Delete, ContentCopy, Search, Edit, CalendarToday, Info } from "@mui/icons-material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -67,6 +69,7 @@ export function TimeEntriesView({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [entries, setEntries] = useState<TimeEntry[]>(initialEntries);
   const [filterClient, setFilterClient] = useState<string>("all");
   const [filterProject, setFilterProject] = useState<string>("all");
@@ -75,6 +78,7 @@ export function TimeEntriesView({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
+  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   
   // Entry form state
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -178,6 +182,24 @@ export function TimeEntriesView({
     params.set("week", format(currentWeek, "yyyy-MM-dd"));
     if (clientId && clientId !== "all") params.set("client_id", clientId);
     router.push(`/time?${params.toString()}`);
+    
+    // Scroll to first filtered entry after filter change
+    setTimeout(() => {
+      const firstFilteredEntry = entries.find((entry) => {
+        if (clientId && clientId !== "all" && entry.client_id !== clientId) return false;
+        return true;
+      });
+      if (firstFilteredEntry) {
+        const element = document.getElementById(`entry-${firstFilteredEntry.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
+          setTimeout(() => {
+            element.style.backgroundColor = "";
+          }, 2000);
+        }
+      }
+    }, 100);
   };
 
   const handleFilterProjectChange = (projectId: string) => {
@@ -187,6 +209,25 @@ export function TimeEntriesView({
     if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
     if (projectId && projectId !== "all") params.set("project_id", projectId);
     router.push(`/time?${params.toString()}`);
+    
+    // Scroll to first filtered entry after filter change
+    setTimeout(() => {
+      const firstFilteredEntry = entries.find((entry) => {
+        if (filterClient && filterClient !== "all" && entry.client_id !== filterClient) return false;
+        if (projectId && projectId !== "all" && entry.project_id !== projectId) return false;
+        return true;
+      });
+      if (firstFilteredEntry) {
+        const element = document.getElementById(`entry-${firstFilteredEntry.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+          element.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
+          setTimeout(() => {
+            element.style.backgroundColor = "";
+          }, 2000);
+        }
+      }
+    }, 100);
   };
 
   const handleClientChange = async (clientId: string) => {
@@ -216,7 +257,7 @@ export function TimeEntriesView({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClient || !selectedProject || !durationValue) {
-      alert("Vul alle velden in");
+      toast.showWarning("Vul alle velden in");
       return;
     }
 
@@ -237,9 +278,10 @@ export function TimeEntriesView({
       setSelectedProject("");
       setEntryModalOpen(false);
       
+      toast.showSuccess("Tijdentry opgeslagen");
       router.refresh();
     } catch (error) {
-      alert("Fout: " + (error as Error).message);
+      toast.showError("Fout: " + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -257,11 +299,49 @@ export function TimeEntriesView({
       setEntries(entries.filter((e) => e.id !== entryToDelete));
       setDeleteConfirmOpen(false);
       setEntryToDelete(null);
+      toast.showSuccess("Tijdentry verwijderd");
       router.refresh();
     } catch (error) {
-      alert("Fout: " + (error as Error).message);
+      toast.showError("Fout: " + (error as Error).message);
       setDeleteConfirmOpen(false);
       setEntryToDelete(null);
+    }
+  };
+
+  const handleSelectEntry = (entryId: string) => {
+    setSelectedEntries((prev) => {
+      const next = new Set(prev);
+      if (next.has(entryId)) {
+        next.delete(entryId);
+      } else {
+        next.add(entryId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllEntries = () => {
+    if (selectedEntries.size === filteredEntries.length) {
+      setSelectedEntries(new Set());
+    } else {
+      setSelectedEntries(new Set(filteredEntries.map((e) => e.id)));
+    }
+  };
+
+  const handleBulkDeleteEntries = async () => {
+    if (selectedEntries.size === 0) return;
+    if (!confirm(`Weet je zeker dat je ${selectedEntries.size} entry(s) wilt verwijderen?`)) {
+      return;
+    }
+    try {
+      await Promise.all(Array.from(selectedEntries).map((id) => deleteTimeEntry(id)));
+      setEntries(entries.filter((e) => !selectedEntries.has(e.id)));
+      const count = selectedEntries.size;
+      setSelectedEntries(new Set());
+      toast.showSuccess(`${count} entry(s) verwijderd`);
+      router.refresh();
+    } catch (error) {
+      toast.showError("Fout bij verwijderen: " + (error as Error).message);
     }
   };
 
@@ -272,7 +352,7 @@ export function TimeEntriesView({
       const projectId = entry.project_id || (entry.projects as any).id || "";
       
       if (!clientId || !projectId) {
-        alert("Kan entry niet dupliceren: client of project ID ontbreekt");
+        toast.showWarning("Kan entry niet dupliceren: client of project ID ontbreekt");
         return;
       }
       
@@ -284,9 +364,10 @@ export function TimeEntriesView({
       formData.set("duration_unit", "minutes");
 
       await createTimeEntry(formData);
+      toast.showSuccess("Tijdentry gedupliceerd");
       router.refresh();
     } catch (error) {
-      alert("Fout bij dupliceren: " + (error as Error).message);
+      toast.showError("Fout bij dupliceren: " + (error as Error).message);
     }
   };
 
@@ -343,15 +424,26 @@ export function TimeEntriesView({
 
   const isCurrentWeek = isSameWeek(currentWeek, getTodayDate(), { weekStartsOn: 1 });
 
-  // Filter entries by search query
+  // Filter entries by client, project, and search query
   const filteredEntries = entries.filter((entry) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      entry.description.toLowerCase().includes(query) ||
-      entry.clients.name.toLowerCase().includes(query) ||
-      entry.projects.name.toLowerCase().includes(query)
-    );
+    // Filter by client
+    if (filterClient && filterClient !== "all" && entry.client_id !== filterClient) {
+      return false;
+    }
+    // Filter by project
+    if (filterProject && filterProject !== "all" && entry.project_id !== filterProject) {
+      return false;
+    }
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      return (
+        entry.description.toLowerCase().includes(query) ||
+        entry.clients.name.toLowerCase().includes(query) ||
+        entry.projects.name.toLowerCase().includes(query)
+      );
+    }
+    return true;
   });
 
   const entriesByDate = filteredEntries.reduce((acc, entry) => {
@@ -629,9 +721,10 @@ export function TimeEntriesView({
       
       console.log(`✅ Timer entry opgeslagen: ${formatDuration(roundedMinutes)} voor ${clientName} - ${projectName}`);
       
+      toast.showSuccess(`Timer entry opgeslagen: ${formatDuration(roundedMinutes)}`);
       router.refresh();
     } catch (error) {
-      alert("Fout bij opslaan timer entry: " + (error as Error).message);
+      toast.showError("Fout bij opslaan timer entry: " + (error as Error).message);
     }
   };
 
@@ -1057,11 +1150,25 @@ export function TimeEntriesView({
             background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
             px: 3,
             py: 2,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
           <Typography variant="h6" sx={{ fontWeight: "bold", color: "white" }}>
             Week overzicht
           </Typography>
+          {selectedEntries.size > 0 && (
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleBulkDeleteEntries}
+              size="small"
+              sx={{ bgcolor: "error.main", "&:hover": { bgcolor: "error.dark" } }}
+            >
+              Verwijder ({selectedEntries.size})
+            </Button>
+          )}
         </Box>
         <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
           {weekDays.map((day) => {
@@ -1090,6 +1197,29 @@ export function TimeEntriesView({
                 <Box sx={{ px: 3, py: 2 }}>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      {dayEntries.length > 0 && (
+                        <Checkbox
+                          checked={dayEntries.length > 0 && dayEntries.every((e: TimeEntry) => selectedEntries.has(e.id))}
+                          indeterminate={dayEntries.some((e: TimeEntry) => selectedEntries.has(e.id)) && !dayEntries.every((e: TimeEntry) => selectedEntries.has(e.id))}
+                          onChange={() => {
+                            const allSelected = dayEntries.every((e: TimeEntry) => selectedEntries.has(e.id));
+                            if (allSelected) {
+                              setSelectedEntries((prev) => {
+                                const next = new Set(prev);
+                                dayEntries.forEach((e: TimeEntry) => next.delete(e.id));
+                                return next;
+                              });
+                            } else {
+                              setSelectedEntries((prev) => {
+                                const next = new Set(prev);
+                                dayEntries.forEach((e: TimeEntry) => next.add(e.id));
+                                return next;
+                              });
+                            }
+                          }}
+                          size="small"
+                        />
+                      )}
                       <Typography
                         variant="body1"
                         sx={{
@@ -1131,6 +1261,29 @@ export function TimeEntriesView({
                       <Table size="small">
                         <TableHead>
                           <TableRow>
+                            <TableCell padding="checkbox" width={50}>
+                              <Checkbox
+                                checked={dayEntries.length > 0 && dayEntries.every((e: TimeEntry) => selectedEntries.has(e.id))}
+                                indeterminate={dayEntries.some((e: TimeEntry) => selectedEntries.has(e.id)) && !dayEntries.every((e: TimeEntry) => selectedEntries.has(e.id))}
+                                onChange={() => {
+                                  const allSelected = dayEntries.every((e: TimeEntry) => selectedEntries.has(e.id));
+                                  if (allSelected) {
+                                    setSelectedEntries((prev) => {
+                                      const next = new Set(prev);
+                                      dayEntries.forEach((e: TimeEntry) => next.delete(e.id));
+                                      return next;
+                                    });
+                                  } else {
+                                    setSelectedEntries((prev) => {
+                                      const next = new Set(prev);
+                                      dayEntries.forEach((e: TimeEntry) => next.add(e.id));
+                                      return next;
+                                    });
+                                  }
+                                }}
+                                size="small"
+                              />
+                            </TableCell>
                             <TableCell sx={{ fontWeight: "bold" }}>Project</TableCell>
                             <TableCell sx={{ fontWeight: "bold" }}>Omschrijving</TableCell>
                             <TableCell align="right" sx={{ fontWeight: "bold" }}>
@@ -1141,7 +1294,14 @@ export function TimeEntriesView({
                         </TableHead>
                         <TableBody>
                           {dayEntries.map((entry) => (
-                            <TableRow key={entry.id} id={`entry-${entry.id}`} hover>
+                            <TableRow key={entry.id} id={`entry-${entry.id}`} hover selected={selectedEntries.has(entry.id)}>
+                              <TableCell padding="checkbox">
+                                <Checkbox
+                                  checked={selectedEntries.has(entry.id)}
+                                  onChange={() => handleSelectEntry(entry.id)}
+                                  size="small"
+                                />
+                              </TableCell>
                               <TableCell>
                                 <Chip
                                   label={entry.projects.name}
@@ -1381,7 +1541,7 @@ export function TimeEntriesView({
           </Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setEntryModalOpen(false)}>Annuleren</Button>
+          <Button onClick={() => setEntryModalOpen(false)} sx={{ color: "text.primary" }}>Annuleren</Button>
           <Button
             type="submit"
             variant="contained"
@@ -1416,7 +1576,7 @@ export function TimeEntriesView({
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setDeleteConfirmOpen(false); setEntryToDelete(null); }}>
+          <Button onClick={() => { setDeleteConfirmOpen(false); setEntryToDelete(null); }} sx={{ color: "text.primary" }}>
             Annuleren
           </Button>
           <Button onClick={confirmDelete} color="error" variant="contained">

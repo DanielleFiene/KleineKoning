@@ -18,6 +18,7 @@ import {
 import { InfoIcon } from "@/components/info-icon";
 import { addClient, updateClient } from "@/app/actions/clients";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/toast-provider";
 
 interface ClientFormProps {
   client?: {
@@ -59,6 +60,7 @@ function SubmitButton({ isEdit }: { isEdit: boolean }) {
 
 export function ClientForm({ client }: ClientFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const isEdit = !!client;
   const initialProfileIndex = client
     ? btwProfiles.findIndex(
@@ -79,13 +81,15 @@ export function ClientForm({ client }: ClientFormProps) {
 
       if (isEdit && client) {
         await updateClient(client.id, formData);
+        toast.showSuccess("Klant bijgewerkt");
       } else {
         await addClient(formData);
+        toast.showSuccess("Klant aangemaakt");
       }
       router.push("/clients");
       router.refresh();
     } catch (error) {
-      alert("Fout: " + (error as Error).message);
+      toast.showError("Fout: " + (error as Error).message);
     }
   }
 

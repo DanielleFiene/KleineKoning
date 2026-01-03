@@ -14,6 +14,7 @@ import {
   Button,
   Box,
 } from "@mui/material";
+import { useToast } from "@/components/toast-provider";
 
 interface TimerSetupDialogProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function TimerSetupDialog({
   clients,
   onSave,
 }: TimerSetupDialogProps) {
+  const toast = useToast();
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -68,7 +70,7 @@ export function TimerSetupDialog({
 
   const handleSave = () => {
     if (!selectedClient || !selectedProject || !description.trim()) {
-      alert("Vul alle velden in");
+      toast.showWarning("Vul alle velden in");
       return;
     }
 
@@ -141,7 +143,7 @@ export function TimerSetupDialog({
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => onOpenChange(false)}>Annuleren</Button>
+        <Button onClick={() => onOpenChange(false)} sx={{ color: "text.primary" }}>Annuleren</Button>
         <Button onClick={handleSave} variant="contained">Opslaan</Button>
       </DialogActions>
     </Dialog>

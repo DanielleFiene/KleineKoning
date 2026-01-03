@@ -4,6 +4,9 @@ import { getStatement } from "@/app/actions/statements";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { parseDateString } from "@/lib/utils/date";
+import { renderToBuffer } from "@react-pdf/renderer";
+import { PDFStatement } from "@/components/pdf-statement";
+import React from "react";
 
 // Helper function to format date string (YYYY-MM-DD) to readable format
 function formatDate(dateStr: string): string {
@@ -53,33 +56,27 @@ export async function GET(
         // Try to fetch the PDF from the URL
         const response = await fetch(statement.pdf_url);
         if (response.ok) {
-          const content = await response.text();
-          return new NextResponse(content, {
-            headers: {
-              "Content-Type": "text/html;charset=utf-8",
-              "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.html"`,
-            },
-          });
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          // Check if it's actually a PDF (starts with %PDF)
+          if (buffer.toString("utf8", 0, 4) === "%PDF") {
+            return new NextResponse(buffer, {
+              headers: {
+                "Content-Type": "application/pdf",
+                "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,
+              },
+            });
+          }
         }
       } catch (fetchError) {
         console.warn("Could not fetch PDF from URL, generating new one:", fetchError);
       }
     }
 
-    // Generate PDF HTML from statement data
+    // Generate real PDF from statement data
     if (!statement.statement_lines || statement.statement_lines.length === 0) {
       return NextResponse.json({ error: "No data found for this statement" }, { status: 404 });
     }
-
-    // Group entries by date
-    const entriesByDate = statement.statement_lines.reduce((acc: any, line: any) => {
-      const date = line.date;
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-      acc[date].push(line);
-      return acc;
-    }, {});
 
     // Calculate totals
     const totalMinutes = statement.statement_lines.reduce(
@@ -87,130 +84,32 @@ export async function GET(
       0
     );
 
-    const formatDuration = (minutes: number) => {
-      if (minutes < 60) return `${minutes} min`;
-      const hours = Math.floor(minutes / 60);
-      const mins = minutes % 60;
-      return mins > 0 ? `${hours}u ${mins}min` : `${hours}u`;
-    };
+    // Prepare entries for PDF component
+    const pdfEntries = statement.statement_lines.map((line: any) => ({
+      date: line.date,
+      project_name: line.project_name || "-",
+      description: line.description,
+      duration_minutes: line.duration_minutes,
+    }));
 
-    // Generate HTML for PDF
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              padding: 40px;
-              color: #333;
-            }
-            .header {
-              margin-bottom: 30px;
-            }
-            .header h1 {
-              margin: 0;
-              font-size: 24px;
-            }
-            .header p {
-              margin: 5px 0;
-              color: #666;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin: 20px 0;
-            }
-            th, td {
-              padding: 10px;
-              text-align: left;
-              border-bottom: 1px solid #ddd;
-            }
-            th {
-              background-color: #f5f5f5;
-              font-weight: bold;
-            }
-            .day-header {
-              background-color: #e9e9e9;
-              font-weight: bold;
-              margin-top: 20px;
-            }
-            .day-total {
-              text-align: right;
-              font-weight: bold;
-            }
-            .total {
-              margin-top: 30px;
-              padding-top: 20px;
-              border-top: 2px solid #333;
-              text-align: right;
-              font-size: 18px;
-              font-weight: bold;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Urenstaat</h1>
-            <p><strong>Klant:</strong> ${statement.clients?.name || "Onbekend"}</p>
-            <p><strong>Statementnummer:</strong> ${statement.statement_number}</p>
-            <p><strong>Periode:</strong> ${formatDate(statement.period_start)} - ${formatDate(statement.period_end)}</p>
-            <p><strong>Opgesteld op:</strong> ${new Date().toLocaleDateString("nl-NL")}</p>
-          </div>
+    // Generate real PDF using @react-pdf/renderer
+    const pdfDocument = React.createElement(PDFStatement, {
+      clientName: statement.clients?.name || "Onbekend",
+      statementNumber: statement.statement_number,
+      periodStart: statement.period_start,
+      periodEnd: statement.period_end,
+      entries: pdfEntries,
+      totalMinutes,
+    });
 
-          ${Object.entries(entriesByDate)
-            .map(([date, dayEntries]: [string, any]) => {
-              const dayTotal = dayEntries.reduce(
-                (sum: number, e: any) => sum + e.duration_minutes,
-                0
-              );
-              return `
-                <div class="day-header">
-                  ${formatDate(date)}
-                </div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Project</th>
-                      <th>Omschrijving</th>
-                      <th style="text-align: right;">Duur</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${dayEntries
-                      .map(
-                        (entry: any) => `
-                      <tr>
-                        <td>${entry.project_name || "-"}</td>
-                        <td>${entry.description}</td>
-                        <td style="text-align: right;">${formatDuration(entry.duration_minutes)}</td>
-                      </tr>
-                    `
-                      )
-                      .join("")}
-                    <tr class="day-total">
-                      <td colspan="2"><strong>Dagtotaal</strong></td>
-                      <td style="text-align: right;"><strong>${formatDuration(dayTotal)}</strong></td>
-                    </tr>
-                  </tbody>
-                </table>
-              `;
-            })
-            .join("")}
+    // Render PDF to buffer
+    const pdfBuffer = await renderToBuffer(pdfDocument);
 
-          <div class="total">
-            Totaal: ${formatDuration(totalMinutes)}
-          </div>
-        </body>
-      </html>
-    `;
-
-    // Return HTML directly
-    return new NextResponse(html, {
+    // Return PDF directly
+    return new NextResponse(pdfBuffer, {
       headers: {
-        "Content-Type": "text/html;charset=utf-8",
-        "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.html"`,
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,
       },
     });
   } catch (error) {

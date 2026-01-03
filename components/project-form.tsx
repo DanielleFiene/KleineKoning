@@ -17,6 +17,7 @@ import {
 import { InfoIcon } from "@/components/info-icon";
 import { createProject, updateProject } from "@/app/actions/projects";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/components/toast-provider";
 
 interface ProjectFormProps {
   clients: Array<{
@@ -58,14 +59,17 @@ export function ProjectForm({
   defaultClientId,
 }: ProjectFormProps) {
   const router = useRouter();
+  const toast = useToast();
   const isEdit = !!project;
 
   async function formAction(formData: FormData) {
     try {
       if (isEdit && project) {
         await updateProject(project.id, formData);
+        toast.showSuccess("Project bijgewerkt");
       } else {
         await createProject(formData);
+        toast.showSuccess("Project aangemaakt");
       }
       if (project) {
         router.push(`/clients/${project.client_id}`);
@@ -75,7 +79,7 @@ export function ProjectForm({
       }
       router.refresh();
     } catch (error) {
-      alert("Fout: " + (error as Error).message);
+      toast.showError("Fout: " + (error as Error).message);
     }
   }
 

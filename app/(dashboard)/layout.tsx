@@ -7,6 +7,8 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { Box, AppBar, Toolbar, IconButton, useMediaQuery, useTheme } from "@mui/material";
 import { Menu as MenuIcon } from "@mui/icons-material";
+import { ToastProvider } from "@/components/toast-provider";
+import { useState, useEffect } from "react";
 
 function SidebarToggleButton() {
   const { toggleSidebar } = useSidebar();
@@ -25,54 +27,116 @@ function SidebarToggleButton() {
   );
 }
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: "#6366f1", // indigo-500
+function createAppTheme(mode: "light" | "dark") {
+  return createTheme({
+    palette: {
+      mode,
+      primary: {
+        main: "#6366f1", // indigo-500
+      },
+      secondary: {
+        main: "#9333ea", // purple-600
+      },
+      background: {
+        default: mode === "dark" ? "#121212" : "#f5f5f5",
+        paper: mode === "dark" ? "#1e1e1e" : "#ffffff",
+      },
     },
-    secondary: {
-      main: "#9333ea", // purple-600
+    components: {
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            backgroundColor: mode === "dark" ? "#1e1e1e" : "#ffffff",
+            color: mode === "dark" ? "#ffffff" : "inherit",
+          },
+        },
+      },
+      MuiPaper: {
+        styleOverrides: {
+          root: {
+            backgroundColor: mode === "dark" ? "#1e1e1e" : "#ffffff",
+          },
+        },
+      },
     },
-  },
-});
+  });
+}
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [mode, setMode] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Check localStorage for saved theme preference
+    const savedMode = localStorage.getItem("theme") as "light" | "dark" | null;
+    if (savedMode) {
+      setMode(savedMode);
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setMode(prefersDark ? "dark" : "light");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem("theme", mode);
+    }
+  }, [mode, mounted]);
+
+  const theme = createAppTheme(mode);
+
+  const toggleTheme = () => {
+    setMode((prev) => (prev === "light" ? "dark" : "light"));
+  };
+
+  if (!mounted) {
+    // Prevent hydration mismatch
+    return null;
+  }
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <SidebarProvider defaultOpen={true}>
-        <SidebarNav />
-        <SidebarInset>
-          <AppBar
-            position="sticky"
-            elevation={1}
-            sx={{
-              backgroundColor: "white",
-              color: "text.primary",
-              borderBottom: "1px solid",
-              borderColor: "divider",
-            }}
-          >
-            <Toolbar sx={{ justifyContent: "space-between", px: 3 }}>
-              <SidebarToggleButton />
-              <UserMenu />
-            </Toolbar>
-          </AppBar>
-          <Box
-            component="main"
-            sx={{
-              minHeight: "100vh",
-              background: "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 50%, rgba(147, 51, 234, 0.1) 100%)",
-            }}
-          >
-            {children}
-          </Box>
-        </SidebarInset>
-      </SidebarProvider>
+      <ToastProvider>
+        <SidebarProvider defaultOpen={true}>
+          <SidebarNav />
+          <SidebarInset>
+            <AppBar
+              position="sticky"
+              elevation={1}
+              sx={{
+                backgroundColor: mode === "dark" ? "#1e1e1e" : "#ffffff",
+                color: mode === "dark" ? "#ffffff" : "text.primary",
+                borderBottom: "1px solid",
+                borderColor: "divider",
+              }}
+            >
+              <Toolbar sx={{ justifyContent: "space-between", px: 3 }}>
+                <SidebarToggleButton />
+                <UserMenu onToggleTheme={toggleTheme} themeMode={mode} />
+              </Toolbar>
+            </AppBar>
+            <Box
+              component="main"
+              sx={{
+                minHeight: "100vh",
+                background:
+                  mode === "dark"
+                    ? "linear-gradient(135deg, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.8) 50%, rgba(30, 30, 30, 0.8) 100%)"
+                    : "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 50%, rgba(147, 51, 234, 0.1) 100%)",
+              }}
+            >
+              {children}
+            </Box>
+          </SidebarInset>
+        </SidebarProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

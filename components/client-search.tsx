@@ -34,6 +34,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { Edit, Delete, Add, Search, GetApp, FilterList, Info } from "@mui/icons-material";
+import { useToast } from "@/components/toast-provider";
 
 interface Client {
   id: string;
@@ -50,6 +51,7 @@ interface Client {
 }
 
 export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
+  const toast = useToast();
   const [search, setSearch] = useState("");
   const [clients, setClients] = useState(initialClients);
   const [sortBy, setSortBy] = useState<"name" | "projects" | "activity">("name");
@@ -112,9 +114,10 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
       });
       setDeleteConfirmOpen(false);
       setClientToDelete(null);
+      toast.showSuccess("Klant verwijderd");
       router.refresh();
     } catch (error) {
-      alert("Fout bij verwijderen: " + (error as Error).message);
+      toast.showError("Fout bij verwijderen: " + (error as Error).message);
       setDeleteConfirmOpen(false);
       setClientToDelete(null);
     }
@@ -129,9 +132,10 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
       await Promise.all(Array.from(selectedClients).map((id) => deleteClient(id)));
       setClients(clients.filter((c) => !selectedClients.has(c.id)));
       setSelectedClients(new Set());
+      toast.showSuccess(`${selectedClients.size} klant(en) verwijderd`);
       router.refresh();
     } catch (error) {
-      alert("Fout bij verwijderen: " + (error as Error).message);
+      toast.showError("Fout bij verwijderen: " + (error as Error).message);
     }
   };
 
@@ -168,8 +172,13 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
         client.lastActivity ? format(new Date(client.lastActivity), "d MMM yyyy", { locale: nl }) : "Nooit",
       ]);
     });
-    const csvContent = csvRows.map((row) => row.map((cell) => `"${cell}"`).join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const csvContent = csvRows
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    
+    // Add UTF-8 BOM for Excel compatibility (especially for euro sign)
+    const csvWithBom = "\uFEFF" + csvContent;
+    const blob = new Blob([csvWithBom], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `klanten_export_${format(new Date(), "yyyy-MM-dd")}.csv`;
@@ -388,7 +397,7 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteConfirmOpen(false)}>Annuleren</Button>
+          <Button onClick={() => setDeleteConfirmOpen(false)} sx={{ color: "text.primary" }}>Annuleren</Button>
           <Button onClick={confirmDelete} color="error" variant="contained">
             Verwijderen
           </Button>

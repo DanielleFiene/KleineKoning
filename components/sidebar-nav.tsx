@@ -60,8 +60,8 @@ export function SidebarNav() {
           <Image
             src="/KleineKoning.jpg"
             alt="KleineKoning Logo"
-            width={64}
-            height={64}
+            width={96}
+            height={96}
             style={{
               borderRadius: "12px",
               border: "2px solid rgba(255, 255, 255, 0.3)",
