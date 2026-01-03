@@ -88,7 +88,7 @@ export function ClientForm({ client }: ClientFormProps) {
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-md">
             <Label htmlFor="name">Naam *</Label>
             <Input
               id="name"
@@ -99,7 +99,7 @@ export function ClientForm({ client }: ClientFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-md">
             <Label htmlFor="btw_profile">BTW Profiel</Label>
             <Select
               value={selectedProfileIndex.toString()}

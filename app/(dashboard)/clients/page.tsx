@@ -18,23 +18,23 @@ export default async function ClientsPage() {
   const clients = await getClients();
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Klanten</h1>
-          <p className="text-muted-foreground">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Klanten</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Beheer je klanten en hun BTW-profielen
           </p>
         </div>
         <Link href="/clients/new">
-          <Button>
+          <Button className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nieuwe Klant
           </Button>
         </Link>
       </div>
 
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Klantenlijst</CardTitle>
           <CardDescription>

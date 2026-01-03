@@ -179,15 +179,15 @@ export function ExportsView({
     : {};
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Exports</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-4 md:space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Exports</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
           Genereer PDF urenstaten per klant en periode
         </p>
       </div>
 
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Nieuwe Export</CardTitle>
           <CardDescription>Selecteer klant en periode</CardDescription>
@@ -224,7 +224,7 @@ export function ExportsView({
           </div>
 
           {periodType === "custom" && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="start">Van</Label>
                 <Input
@@ -253,7 +253,7 @@ export function ExportsView({
       </Card>
 
       {previewData && (
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Preview</CardTitle>
             <CardDescription>
@@ -276,35 +276,42 @@ export function ExportsView({
                     );
                     return (
                       <div key={date} className="space-y-2">
-                        <div className="flex justify-between font-semibold">
-                          <span>{format(new Date(date), "EEEE d MMMM", { locale: nl })}</span>
-                          <span>{formatDuration(dayTotal)}</span>
+                        <div className="flex flex-col sm:flex-row sm:justify-between gap-2 font-semibold">
+                          <span className="text-sm sm:text-base">{format(new Date(date), "EEEE d MMMM", { locale: nl })}</span>
+                          <span className="text-sm sm:text-base">{formatDuration(dayTotal)}</span>
                         </div>
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Project</TableHead>
-                              <TableHead>Omschrijving</TableHead>
-                              <TableHead className="text-right">Duur</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {dayEntries.map((entry: any) => (
-                              <TableRow key={entry.id}>
-                                <TableCell>{entry.projects?.name || "-"}</TableCell>
-                                <TableCell>{entry.description}</TableCell>
-                                <TableCell className="text-right">
-                                  {formatDuration(entry.duration_minutes)}
-                                </TableCell>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Project</TableHead>
+                                <TableHead className="hidden md:table-cell">Omschrijving</TableHead>
+                                <TableHead className="text-right">Duur</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {dayEntries.map((entry: any) => (
+                                <TableRow key={entry.id}>
+                                  <TableCell className="font-medium">
+                                    {entry.projects?.name || "-"}
+                                    <div className="text-xs text-muted-foreground md:hidden mt-1">
+                                      {entry.description}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="hidden md:table-cell">{entry.description}</TableCell>
+                                  <TableCell className="text-right">
+                                    {formatDuration(entry.duration_minutes)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
                       </div>
                     );
                   })}
                   <div className="pt-4 border-t">
-                    <div className="flex justify-between font-bold text-lg">
+                    <div className="flex justify-between font-bold text-base sm:text-lg">
                       <span>Totaal</span>
                       <span>
                         {formatDuration(
@@ -340,7 +347,7 @@ export function ExportsView({
         </Card>
       )}
 
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Gegenereerde Statements</CardTitle>
           <CardDescription>Alle gegenereerde urenstaten</CardDescription>
@@ -351,46 +358,51 @@ export function ExportsView({
               Nog geen statements gegenereerd
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Statement #</TableHead>
-                  <TableHead>Klant</TableHead>
-                  <TableHead>Periode</TableHead>
-                  <TableHead>Gegenereerd op</TableHead>
-                  <TableHead className="text-right">Acties</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {statements.map((statement) => (
-                  <TableRow key={statement.id}>
-                    <TableCell className="font-medium">
-                      {statement.statement_number}
-                    </TableCell>
-                    <TableCell>{statement.clients.name}</TableCell>
-                    <TableCell>
-                      {format(new Date(statement.period_start), "d MMM", { locale: nl })} -{" "}
-                      {format(new Date(statement.period_end), "d MMM yyyy", { locale: nl })}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(statement.generated_at), "d MMM yyyy HH:mm", { locale: nl })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {statement.pdf_url ? (
-                        <a href={statement.pdf_url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm">
-                            <Download className="h-4 w-4 mr-2" />
-                            Download
-                          </Button>
-                        </a>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">Geen PDF</span>
-                      )}
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Statement #</TableHead>
+                    <TableHead className="hidden md:table-cell">Klant</TableHead>
+                    <TableHead className="hidden lg:table-cell">Periode</TableHead>
+                    <TableHead className="hidden lg:table-cell">Gegenereerd op</TableHead>
+                    <TableHead className="text-right">Acties</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {statements.map((statement) => (
+                    <TableRow key={statement.id}>
+                      <TableCell className="font-medium">
+                        {statement.statement_number}
+                        <div className="text-xs text-muted-foreground md:hidden mt-1">
+                          {statement.clients.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">{statement.clients.name}</TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {format(new Date(statement.period_start), "d MMM", { locale: nl })} -{" "}
+                        {format(new Date(statement.period_end), "d MMM yyyy", { locale: nl })}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {format(new Date(statement.generated_at), "d MMM yyyy HH:mm", { locale: nl })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {statement.pdf_url ? (
+                          <a href={statement.pdf_url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                              <Download className="h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Download</span>
+                            </Button>
+                          </a>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Geen PDF</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

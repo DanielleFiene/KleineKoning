@@ -173,7 +173,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Upload to Supabase Storage
-    const fileName = `${statementId}.html`;
+    // Path must include user ID folder to match storage policy: auth.uid()::text = (storage.foldername(name))[1]
+    const fileName = `${user.id}/${statementId}.html`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("statements")
       .upload(fileName, buffer, {

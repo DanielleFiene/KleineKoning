@@ -290,11 +290,11 @@ export function TimeEntriesView({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Tijdregistratie</h1>
-          <p className="text-muted-foreground">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Tijdregistratie</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Registreer je gewerkte uren per project
           </p>
         </div>
@@ -306,7 +306,7 @@ export function TimeEntriesView({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium min-w-[200px] text-center">
+          <span className="text-xs sm:text-sm font-medium min-w-[140px] sm:min-w-[200px] text-center">
             {format(currentWeek, "d MMM", { locale: nl })} -{" "}
             {format(endOfWeek(currentWeek, { weekStartsOn: 1 }), "d MMM yyyy", { locale: nl })}
           </span>
@@ -335,7 +335,7 @@ export function TimeEntriesView({
           </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="client_id">Klant *</Label>
                 <Select
@@ -378,7 +378,7 @@ export function TimeEntriesView({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="date">Datum *</Label>
                 <Input
@@ -444,7 +444,7 @@ export function TimeEntriesView({
         </Card>
       </div>
 
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Week Overzicht</CardTitle>
           <CardDescription>Entries gegroepeerd per dag</CardDescription>
@@ -460,8 +460,8 @@ export function TimeEntriesView({
 
             return (
               <div key={dayStr} className="mb-6 last:mb-0">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                  <h3 className="font-semibold text-base sm:text-lg">
                     {format(day, "EEEE d MMMM", { locale: nl })}
                   </h3>
                   <span className="text-sm text-muted-foreground">
@@ -473,42 +473,49 @@ export function TimeEntriesView({
                     Geen entries voor deze dag
                   </p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Tijd</TableHead>
-                        <TableHead>Klant</TableHead>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Omschrijving</TableHead>
-                        <TableHead className="text-right">Duur</TableHead>
-                        <TableHead className="text-right">Acties</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {dayEntries.map((entry) => (
-                        <TableRow key={entry.id}>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {format(new Date(entry.date + "T00:00:00"), "HH:mm")}
-                          </TableCell>
-                          <TableCell>{entry.clients.name}</TableCell>
-                          <TableCell>{entry.projects.name}</TableCell>
-                          <TableCell>{entry.description}</TableCell>
-                          <TableCell className="text-right">
-                            {formatDuration(entry.duration_minutes)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(entry.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="hidden sm:table-cell">Tijd</TableHead>
+                          <TableHead className="hidden md:table-cell">Klant</TableHead>
+                          <TableHead>Project</TableHead>
+                          <TableHead className="hidden lg:table-cell">Omschrijving</TableHead>
+                          <TableHead className="text-right">Duur</TableHead>
+                          <TableHead className="text-right">Acties</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {dayEntries.map((entry) => (
+                          <TableRow key={entry.id}>
+                            <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
+                              {format(new Date(entry.date + "T00:00:00"), "HH:mm")}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">{entry.clients.name}</TableCell>
+                            <TableCell className="font-medium">
+                              {entry.projects.name}
+                              <div className="text-xs text-muted-foreground md:hidden mt-1">
+                                {entry.clients.name} • {entry.description}
+                              </div>
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">{entry.description}</TableCell>
+                            <TableCell className="text-right">
+                              {formatDuration(entry.duration_minutes)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDelete(entry.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </div>
             );

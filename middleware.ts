@@ -33,8 +33,13 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect all routes except /login
-  if (!user && !request.nextUrl.pathname.startsWith("/login")) {
+  // Protect all routes except /login and /auth/callback
+  // /auth/callback must be accessible without auth to exchange magic link codes
+  const isPublicRoute = 
+    request.nextUrl.pathname.startsWith("/login") || 
+    request.nextUrl.pathname.startsWith("/auth/callback");
+  
+  if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

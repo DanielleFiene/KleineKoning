@@ -79,7 +79,7 @@ export function ProjectForm({
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-md">
             <Label htmlFor="client_id">Klant *</Label>
             <Select
               name="client_id"
@@ -100,7 +100,7 @@ export function ProjectForm({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-md">
             <Label htmlFor="name">Naam *</Label>
             <Input
               id="name"
@@ -111,7 +111,7 @@ export function ProjectForm({
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-md">
             <Label htmlFor="rate_ex_btw">Tarief (ex BTW)</Label>
             <Input
               id="rate_ex_btw"
@@ -127,7 +127,7 @@ export function ProjectForm({
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-md">
             <Label htmlFor="default_unit">Standaard Unit *</Label>
             <Select
               name="default_unit"
@@ -146,7 +146,7 @@ export function ProjectForm({
             </Select>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 max-w-md">
             <Label htmlFor="rounding_rule">Afrondingsregel *</Label>
             <Select
               name="rounding_rule"

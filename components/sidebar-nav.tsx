@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import {
   Sidebar,
   SidebarContent,
@@ -11,8 +12,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarHeader,
 } from "@/components/ui/sidebar";
-import { Clock, Users, FolderKanban, FileText, LogIn } from "lucide-react";
+import { Clock, Users, FolderKanban, FileText } from "lucide-react";
 
 const menuItems = [
   {
@@ -42,6 +44,21 @@ export function SidebarNav() {
 
   return (
     <Sidebar>
+      <SidebarHeader className="border-b px-4 py-4">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/KleineKoning.jpg"
+            alt="KleineKoning Logo"
+            width={40}
+            height={40}
+            className="rounded-lg object-contain"
+          />
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">KleineKoning</span>
+            <span className="text-xs text-muted-foreground">Tijdregistratie</span>
+          </div>
+        </div>
+      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Navigatie</SidebarGroupLabel>
