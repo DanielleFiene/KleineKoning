@@ -87,10 +87,10 @@ export function ClientForm({ client }: ClientFormProps) {
             : "Voeg een nieuwe klant toe aan je lijst"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4">
         <form action={formAction} className="space-y-4">
           <div className="space-y-2 max-w-md">
-            <Label htmlFor="name">Naam *</Label>
+            <Label htmlFor="name" className="text-sm text-slate-900">Naam *</Label>
             <Input
               id="name"
               name="name"
@@ -101,7 +101,7 @@ export function ClientForm({ client }: ClientFormProps) {
           </div>
 
           <div className="space-y-2 max-w-md">
-            <Label htmlFor="btw_profile">BTW Profiel</Label>
+            <Label htmlFor="btw_profile" className="text-sm text-slate-900">BTW Profiel</Label>
             <Select
               value={selectedProfileIndex.toString()}
               onValueChange={(value) => setSelectedProfileIndex(parseInt(value))}

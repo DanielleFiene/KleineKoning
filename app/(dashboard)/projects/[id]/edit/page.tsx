@@ -14,13 +14,15 @@ export default async function EditProjectPage({
   const clients = await getClients();
 
   return (
-    <div>
-      <div>
-        <h1>Project bewerken</h1>
-        <p>
-          Wijzig de instellingen van dit project
-        </p>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Project bewerken</h1>
+        </div>
       </div>
+
+      {/* Content Card */}
       <ProjectForm
         clients={clients}
         project={{

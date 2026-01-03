@@ -1,7 +1,19 @@
-// components/timer-setup-dialog.tsx
 "use client";
 
 import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogActions,
+  DialogTitle,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button,
+  Box,
+} from "@mui/material";
 
 interface TimerSetupDialogProps {
   open: boolean;
@@ -24,7 +36,6 @@ export function TimerSetupDialog({
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [projects, setProjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (selectedClient) {
@@ -56,56 +67,52 @@ export function TimerSetupDialog({
     onOpenChange(false);
   };
 
-  if (!open) return null;
-
   return (
-    <div>
-      <div>
-        <div>Timer Instellen</div>
-        <div>Selecteer klant en project om de timer te starten</div>
-      </div>
-      <div>
-        <div>
-          <label htmlFor="timer-client">Klant *</label>
-          <select
-            id="timer-client"
-            value={selectedClient}
-            onChange={(e) => setSelectedClient(e.target.value)}
-          >
-            <option value="">Selecteer klant</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
-        </div>
+    <Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>Timer instellen</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 2 }}>
+          <FormControl fullWidth>
+            <InputLabel id="timer-client-label">Klant</InputLabel>
+            <Select
+              labelId="timer-client-label"
+              id="timer-client"
+              value={selectedClient}
+              label="Klant"
+              onChange={(e) => setSelectedClient(e.target.value)}
+            >
+              {clients.map((client) => (
+                <MenuItem key={client.id} value={client.id}>
+                  {client.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <div>
-          <label htmlFor="timer-project">Project *</label>
-          <select
-            id="timer-project"
-            value={selectedProject}
-            onChange={(e) => setSelectedProject(e.target.value)}
-            disabled={!selectedClient}
-          >
-            <option value="">Selecteer project</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          <FormControl fullWidth disabled={!selectedClient}>
+            <InputLabel id="timer-project-label">Project</InputLabel>
+            <Select
+              labelId="timer-project-label"
+              id="timer-project"
+              value={selectedProject}
+              label="Project"
+              onChange={(e) => setSelectedProject(e.target.value)}
+            >
+              {projects.map((project) => (
+                <MenuItem key={project.id} value={project.id}>
+                  {project.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <div>
-          <label htmlFor="timer-description">Omschrijving *</label>
-          <input
+          <TextField
             id="timer-description"
-            type="text"
+            label="Omschrijving"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Wat ga je doen?"
+            fullWidth
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -113,16 +120,12 @@ export function TimerSetupDialog({
               }
             }}
           />
-        </div>
-      </div>
-      <div>
-        <button onClick={() => onOpenChange(false)}>
-          Annuleren
-        </button>
-        <button onClick={handleSave} disabled={loading}>
-          Opslaan
-        </button>
-      </div>
-    </div>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => onOpenChange(false)}>Annuleren</Button>
+        <Button onClick={handleSave} variant="contained">Opslaan</Button>
+      </DialogActions>
+    </Dialog>
   );
 }

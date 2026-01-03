@@ -1,7 +1,17 @@
-// components/timer-stop-dialog.tsx
 "use client";
 
 import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogActions,
+  DialogTitle,
+  TextField,
+  Button,
+  Box,
+  Paper,
+  Typography,
+} from "@mui/material";
 
 interface TimerStopDialogProps {
   open: boolean;
@@ -74,57 +84,54 @@ export function TimerStopDialog({
     onOpenChange(false);
   };
 
-  if (!open) return null;
-
   return (
-    <div>
-      <div>
-        <div>Timer Entry Opslaan</div>
-        <div>Controleer de gegevens en sla de timer entry op</div>
-      </div>
-      <div>
-        <div>
-          <label>Klant</label>
-          <div>{clientName}</div>
-        </div>
+    <Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="sm" fullWidth>
+      <DialogTitle>Timer entry opslaan</DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 2 }}>
+          <Paper sx={{ p: 2, backgroundColor: "grey.100" }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="body2" color="text.secondary">Klant:</Typography>
+                <Typography variant="body2" fontWeight="medium">{clientName}</Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="body2" color="text.secondary">Project:</Typography>
+                <Typography variant="body2" fontWeight="medium">{projectName}</Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="body2" color="text.secondary">Duur:</Typography>
+                <Typography variant="body2" fontWeight="medium">{formatDuration(roundedMinutes)}</Typography>
+              </Box>
+              {wasRounded && (
+                <Box sx={{ pt: 1, mt: 1, borderTop: 1, borderColor: "divider" }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Afgerond van {formatDuration(durationMinutes)} naar {formatDuration(roundedMinutes)} ({roundingRule})
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Paper>
 
-        <div>
-          <label>Project</label>
-          <div>{projectName}</div>
-        </div>
-
-        <div>
-          <label>Duur</label>
-          <div>
-            <div>{formatDuration(roundedMinutes)}</div>
-            {wasRounded && (
-              <div>
-                Afgerond van {formatDuration(durationMinutes)} naar{" "}
-                {formatDuration(roundedMinutes)} ({roundingRule})
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <label htmlFor="stop-date">Datum *</label>
-          <input
+          <TextField
             id="stop-date"
+            label="Datum"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            fullWidth
+            InputLabelProps={{ shrink: true }}
             required
           />
-        </div>
 
-        <div>
-          <label htmlFor="stop-description">Omschrijving *</label>
-          <input
+          <TextField
             id="stop-description"
+            label="Omschrijving"
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Wat heb je gedaan?"
+            fullWidth
             required
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -133,14 +140,12 @@ export function TimerStopDialog({
               }
             }}
           />
-        </div>
-      </div>
-      <div>
-        <button onClick={() => onOpenChange(false)}>
-          Annuleren
-        </button>
-        <button onClick={handleSave}>Opslaan</button>
-      </div>
-    </div>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => onOpenChange(false)}>Annuleren</Button>
+        <Button onClick={handleSave} variant="contained">Opslaan</Button>
+      </DialogActions>
+    </Dialog>
   );
 }

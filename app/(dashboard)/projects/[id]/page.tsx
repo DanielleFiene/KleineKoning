@@ -2,7 +2,7 @@
 import { getProject } from "@/app/actions/projects";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit } from "lucide-react";
+import { Edit } from "@mui/icons-material";
 import Link from "next/link";
 
 export default async function ProjectDetailPage({
@@ -15,11 +15,12 @@ export default async function ProjectDetailPage({
   const project = await getProject(id);
 
   return (
-    <div>
-      <div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1>{project.name}</h1>
-          <p>
+          <h1 className="text-2xl font-semibold text-slate-900">{project.name}</h1>
+          <p className="text-sm text-slate-600 mt-1">
             Klant: {(project as any).clients?.name || "-"}
           </p>
         </div>
@@ -31,24 +32,27 @@ export default async function ProjectDetailPage({
         </Link>
       </div>
 
+      {/* Content Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>Project Details</CardTitle>
+        <CardHeader className="p-4">
+          <CardTitle className="text-lg font-medium text-slate-900">Project Details</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div>
-            <p>Tarief (ex BTW)</p>
-            <p>
-              {project.rate_ex_btw ? `€${project.rate_ex_btw.toFixed(2)}` : "Niet ingesteld"}
-            </p>
-          </div>
-          <div>
-            <p>Standaard Unit</p>
-            <p>{project.default_unit}</p>
-          </div>
-          <div>
-            <p>Afrondingsregel</p>
-            <p>{project.rounding_rule}</p>
+        <CardContent className="p-4">
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-slate-600 mb-1">Tarief (ex BTW)</p>
+              <p className="text-sm text-slate-900">
+                {project.rate_ex_btw ? `€${project.rate_ex_btw.toFixed(2)}` : "Niet ingesteld"}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-600 mb-1">Standaard Unit</p>
+              <p className="text-sm text-slate-900">{project.default_unit}</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-600 mb-1">Afrondingsregel</p>
+              <p className="text-sm text-slate-900">{project.rounding_rule}</p>
+            </div>
           </div>
         </CardContent>
       </Card>

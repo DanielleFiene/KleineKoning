@@ -3,12 +3,37 @@
 
 import { useState, useEffect } from "react";
 import { createTimeEntry, deleteTimeEntry } from "@/app/actions/time-entries";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek, isSameWeek } from "date-fns";
 import { nl } from "date-fns/locale";
 import { Timer } from "@/components/timer";
 import { TimerSetupDialog } from "@/components/timer-setup-dialog";
 import { TimerStopDialog } from "@/components/timer-stop-dialog";
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  Button,
+  IconButton,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+} from "@mui/material";
+import { ChevronLeft, ChevronRight, Add, Delete } from "@mui/icons-material";
 
 interface TimeEntry {
   id: string;
@@ -34,33 +59,12 @@ export function TimeEntriesView({
   weekStart: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [entries, setEntries] = useState<TimeEntry[]>(initialEntries);
-  const [filterClient, setFilterClient] = useState<string>("");
-  const [filterProject, setFilterProject] = useState<string>("");
+  const [filterClient, setFilterClient] = useState<string>("all");
+  const [filterProject, setFilterProject] = useState<string>("all");
   const [projects, setProjects] = useState<any[]>([]);
   const [entryModalOpen, setEntryModalOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
-
-  // Update entries when weekStart changes (from URL)
-  useEffect(() => {
-    setEntries(initialEntries);
-  }, [initialEntries]);
-
-  // Ensure URL has week parameter on initial load, and redirect to current week if missing
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (!urlParams.has("week")) {
-      // Calculate current week (Monday) - use today's date
-      const today = new Date();
-      const monday = startOfWeek(today, { weekStartsOn: 1 });
-      // Update URL with current week
-      const params = new URLSearchParams();
-      params.set("week", format(monday, "yyyy-MM-dd"));
-      if (filterClient) params.set("client_id", filterClient);
-      if (filterProject) params.set("project_id", filterProject);
-      router.replace(`/time?${params.toString()}`, { scroll: false });
-    }
-  }, []); // Only run once on mount
   
   // Entry form state
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -82,13 +86,44 @@ export function TimeEntriesView({
   } | null>(null);
   const [allProjects, setAllProjects] = useState<any[]>([]);
 
-  // Parse weekStart string to Date, ensuring it's valid
   const weekStartDate = new Date(weekStart);
-  const currentWeek = startOfWeek(isNaN(weekStartDate.getTime()) ? new Date() : weekStartDate, { weekStartsOn: 1 });
+  const currentWeek = startOfWeek(weekStartDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({
     start: currentWeek,
     end: endOfWeek(currentWeek, { weekStartsOn: 1 }),
   });
+
+  useEffect(() => {
+    setEntries(initialEntries);
+  }, [initialEntries]);
+
+  useEffect(() => {
+    const clientId = searchParams.get("client_id");
+    const projectId = searchParams.get("project_id");
+    
+    if (clientId) {
+      setFilterClient(clientId);
+      // Load projects for this client
+      fetch(`/api/projects?client_id=${clientId}`)
+        .then((res) => res.json())
+        .then((projs) => {
+          setProjects(projs);
+          if (projectId) {
+            setFilterProject(projectId);
+          } else {
+            setFilterProject("all");
+          }
+        })
+        .catch(() => {
+          setProjects([]);
+          setFilterProject("all");
+        });
+    } else {
+      setFilterClient("all");
+      setProjects([]);
+      setFilterProject("all");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadAllProjects = async () => {
@@ -109,8 +144,8 @@ export function TimeEntriesView({
 
   const handleFilterClientChange = async (clientId: string) => {
     setFilterClient(clientId);
-    setFilterProject("");
-    if (clientId) {
+    setFilterProject("all");
+    if (clientId && clientId !== "all") {
       try {
         const response = await fetch(`/api/projects?client_id=${clientId}`);
         const projs = await response.json();
@@ -122,18 +157,19 @@ export function TimeEntriesView({
     } else {
       setProjects([]);
     }
-    // Update URL with filter
     const params = new URLSearchParams();
-    if (clientId) params.set("client_id", clientId);
-    router.push(`/time?week=${format(currentWeek, "yyyy-MM-dd")}&${params.toString()}`);
+    params.set("week", format(currentWeek, "yyyy-MM-dd"));
+    if (clientId && clientId !== "all") params.set("client_id", clientId);
+    router.push(`/time?${params.toString()}`);
   };
 
   const handleFilterProjectChange = (projectId: string) => {
     setFilterProject(projectId);
     const params = new URLSearchParams();
-    if (filterClient) params.set("client_id", filterClient);
-    if (projectId) params.set("project_id", projectId);
-    router.push(`/time?week=${format(currentWeek, "yyyy-MM-dd")}&${params.toString()}`);
+    params.set("week", format(currentWeek, "yyyy-MM-dd"));
+    if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
+    if (projectId && projectId !== "all") params.set("project_id", projectId);
+    router.push(`/time?${params.toString()}`);
   };
 
   const handleClientChange = async (clientId: string) => {
@@ -172,7 +208,6 @@ export function TimeEntriesView({
 
       await createTimeEntry(formData);
       
-      // Reset form
       setDescription("");
       setDurationValue("");
       setSelectedProject("");
@@ -203,27 +238,25 @@ export function TimeEntriesView({
       ? addWeeks(currentWeek, 1)
       : subWeeks(currentWeek, 1);
     const params = new URLSearchParams();
-    if (filterClient) params.set("client_id", filterClient);
-    if (filterProject) params.set("project_id", filterProject);
-    router.push(`/time?week=${format(newWeek, "yyyy-MM-dd")}&${params.toString()}`);
+    params.set("week", format(newWeek, "yyyy-MM-dd"));
+    if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
+    if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
+    router.push(`/time?${params.toString()}`);
   };
 
   const navigateToToday = () => {
-    const today = new Date();
-    const monday = startOfWeek(today, { weekStartsOn: 1 });
+    const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
     const params = new URLSearchParams();
     params.set("week", format(monday, "yyyy-MM-dd"));
-    if (filterClient) params.set("client_id", filterClient);
-    if (filterProject) params.set("project_id", filterProject);
+    if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
+    if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
     router.push(`/time?${params.toString()}`);
   };
 
   const isCurrentWeek = isSameWeek(currentWeek, new Date(), { weekStartsOn: 1 });
 
-  // Group entries by date (YYYY-MM-DD format)
   const entriesByDate = entries.reduce((acc, entry) => {
-    // Ensure date is in YYYY-MM-DD format
-    const date = entry.date.split("T")[0]; // Handle ISO datetime strings
+    const date = entry.date.split("T")[0];
     if (!acc[date]) {
       acc[date] = [];
     }
@@ -352,7 +385,6 @@ export function TimeEntriesView({
   };
 
   const openEntryModal = () => {
-    setEditingEntry(null);
     setSelectedClient("");
     setSelectedProject("");
     setDate(new Date().toISOString().split("T")[0]);
@@ -362,264 +394,433 @@ export function TimeEntriesView({
     setEntryModalOpen(true);
   };
 
+  const weekTotal = calculateWeekTotal();
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const todayEntries = entriesByDate[todayStr] || [];
+  const todayTotal = todayEntries.reduce((sum, e) => sum + e.duration_minutes, 0);
+
   return (
-    <div>
-      {/* Bovenbalk */}
-      <div>
-        <div>
-          {/* Week selector */}
-          <div>
-            <button onClick={() => navigateWeek("prev")}>
-              &lt;
-            </button>
-            <span>
-              {format(currentWeek, "d MMM", { locale: nl })} -{" "}
-              {format(endOfWeek(currentWeek, { weekStartsOn: 1 }), "d MMM yyyy", { locale: nl })}
-            </span>
-            <button onClick={() => navigateWeek("next")}>
-              &gt;
-            </button>
-            <button onClick={navigateToToday} disabled={isCurrentWeek}>
-              Vandaag
-            </button>
-          </div>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, mb: 4, gap: 2 }}>
+        <Typography
+          variant="h3"
+          component="h1"
+          sx={{
+            fontWeight: "bold",
+            background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            backgroundClip: "text",
+          }}
+        >
+          Tijdregistratie
+        </Typography>
+        <Box sx={{ display: "flex", gap: 2, width: { xs: "100%", sm: "auto" } }}>
+          <Button
+            variant="outlined"
+            onClick={navigateToToday}
+            disabled={isCurrentWeek}
+            sx={{ flex: { xs: 1, sm: "none" } }}
+          >
+            Vandaag
+          </Button>
+          <Button
+            variant="contained"
+            onClick={openEntryModal}
+            startIcon={<Add />}
+            sx={{
+              flex: { xs: 1, sm: "none" },
+              background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+              "&:hover": {
+                background: "linear-gradient(90deg, #4f46e5 0%, #7e22ce 100%)",
+              },
+            }}
+          >
+            Nieuwe entry
+          </Button>
+        </Box>
+      </Box>
 
-          {/* Filters */}
-          <div>
-            <label htmlFor="filter-client">Klant</label>
-            <select
-              id="filter-client"
-              value={filterClient}
-              onChange={(e) => handleFilterClientChange(e.target.value)}
-            >
-              <option value="">Alle klanten</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
+      {/* Week Navigation + Stats */}
+      <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
+        <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: 3 }}>
+          <Box sx={{ flex: { xs: "1", lg: "2" }, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
+            <IconButton onClick={() => navigateWeek("prev")} size="small">
+              <ChevronLeft />
+            </IconButton>
+            <Box sx={{ textAlign: "center", flex: 1 }}>
+              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                {format(currentWeek, "d MMM", { locale: nl })} - {format(endOfWeek(currentWeek, { weekStartsOn: 1 }), "d MMM yyyy", { locale: nl })}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Week {format(currentWeek, "w", { locale: nl })}
+              </Typography>
+            </Box>
+            <IconButton onClick={() => navigateWeek("next")} size="small">
+              <ChevronRight />
+            </IconButton>
+          </Box>
+          <Box
+            sx={{
+              flex: { xs: "1", lg: "1" },
+              display: "flex",
+              alignItems: "center",
+              justifyContent: { xs: "space-around", lg: "flex-end" },
+              gap: { xs: 2, lg: 4 },
+              borderTop: { xs: "1px solid", lg: "none" },
+              borderLeft: { xs: "none", lg: "1px solid" },
+              borderColor: "divider",
+              pt: { xs: 2, lg: 0 },
+              pl: { xs: 0, lg: 3 },
+            }}
+          >
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="caption" color="text.secondary">
+                Week
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: "bold", color: "primary.main" }}>
+                {formatDuration(weekTotal)}
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="caption" color="text.secondary">
+                Vandaag
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: "bold", color: "secondary.main" }}>
+                {formatDuration(todayTotal)}
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="caption" color="text.secondary">
+                Gemiddeld
+              </Typography>
+              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
+                {formatDuration(Math.round(weekTotal / 7))}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      </Paper>
 
-            <label htmlFor="filter-project">Project</label>
-            <select
-              id="filter-project"
-              value={filterProject}
-              onChange={(e) => handleFilterProjectChange(e.target.value)}
-              disabled={!filterClient}
-            >
-              <option value="">Alle projecten</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      {/* Filters + Timer */}
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: 3, mb: 3 }}>
+        <Box sx={{ flex: { xs: "1", lg: "2" } }}>
+          <Paper elevation={1} sx={{ p: { xs: 2, sm: 3 } }}>
+            <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2 }}>
+              <FormControl fullWidth>
+                <InputLabel>Klant</InputLabel>
+                <Select
+                  value={filterClient}
+                  onChange={(e) => handleFilterClientChange(e.target.value)}
+                  label="Klant"
+                >
+                  <MenuItem value="all">Alle klanten</MenuItem>
+                  {clients.map((client) => (
+                    <MenuItem key={client.id} value={client.id}>
+                      {client.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth disabled={!filterClient || filterClient === "all"}>
+                <InputLabel>Project</InputLabel>
+                <Select
+                  value={filterProject}
+                  onChange={(e) => handleFilterProjectChange(e.target.value)}
+                  label="Project"
+                >
+                  <MenuItem value="all">Alle projecten</MenuItem>
+                  {projects.map((project) => (
+                    <MenuItem key={project.id} value={project.id}>
+                      {project.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </Paper>
+        </Box>
+        <Box sx={{ flex: { xs: "1", lg: "1" } }}>
+          <Timer
+            onStop={handleTimerStop}
+            onSetup={() => setTimerSetupOpen(true)}
+            clients={clients}
+            projects={allProjects}
+          />
+        </Box>
+      </Box>
 
-          {/* CTA: + Entry */}
-          <button onClick={openEntryModal}>
-            + Entry
-          </button>
-        </div>
-      </div>
-
-      {/* Timer */}
-      <div>
-        <Timer
-          onStop={handleTimerStop}
-          onSetup={() => setTimerSetupOpen(true)}
-          clients={clients}
-          projects={allProjects}
-        />
-      </div>
-
-      {/* Weekoverzicht */}
-      <div>
-        <div>
-          <h2>Week Overzicht</h2>
-          <div>
-            <span>Week totaal: {formatDuration(calculateWeekTotal())}</span>
-          </div>
-        </div>
-
-        <div>
+      {/* Week Overview */}
+      <Paper elevation={1} sx={{ overflow: "hidden" }}>
+        <Box
+          sx={{
+            background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+            px: 3,
+            py: 2,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: "bold", color: "white" }}>
+            Week overzicht
+          </Typography>
+        </Box>
+        <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
           {weekDays.map((day) => {
             const dayStr = format(day, "yyyy-MM-dd");
             const dayEntries = entriesByDate[dayStr] || [];
-            const dayTotal = dayEntries.reduce(
-              (sum, e) => sum + e.duration_minutes,
-              0
-            );
+            const dayTotal = dayEntries.reduce((sum, e) => sum + e.duration_minutes, 0);
+            const isToday = dayStr === todayStr;
 
             return (
-              <div key={dayStr}>
-                <div>
-                  <h3>{format(day, "EEEE d MMMM", { locale: nl })}</h3>
-                  <div>
-                    <span>Totaal: {formatDuration(dayTotal)}</span>
-                  </div>
-                </div>
-                {dayEntries.length === 0 ? (
-                  <div>
-                    <p>Geen entries voor deze dag</p>
-                  </div>
-                ) : (
-                  <div>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Project</th>
-                          <th>Omschrijving</th>
-                          <th>Duur</th>
-                          <th>Acties</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {dayEntries.map((entry) => (
-                          <tr key={entry.id}>
-                            <td>{entry.projects.name}</td>
-                            <td>{entry.description}</td>
-                            <td>{formatDuration(entry.duration_minutes)}</td>
-                            <td>
-                              <button onClick={() => handleDelete(entry.id)}>
-                                Verwijderen
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+              <Box
+                key={dayStr}
+                sx={{
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  borderLeft: isToday ? "4px solid" : "none",
+                  borderLeftColor: isToday ? "primary.main" : "transparent",
+                  background: isToday
+                    ? "linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)"
+                    : "transparent",
+                  "&:hover": {
+                    backgroundColor: isToday ? "rgba(99, 102, 241, 0.15)" : "action.hover",
+                  },
+                  transition: "background-color 0.2s",
+                }}
+              >
+                <Box sx={{ px: 3, py: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          fontWeight: "bold",
+                          textTransform: "capitalize",
+                          color: isToday ? "primary.dark" : "text.primary",
+                        }}
+                      >
+                        {format(day, "EEEE d MMMM", { locale: nl })}
+                      </Typography>
+                      {isToday && (
+                        <Chip
+                          label="Vandaag"
+                          size="small"
+                          sx={{
+                            background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+                            color: "white",
+                            fontWeight: "bold",
+                            fontSize: "0.7rem",
+                          }}
+                        />
+                      )}
+                    </Box>
+                    {dayTotal > 0 && (
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontWeight: "bold",
+                          color: isToday ? "primary.main" : "text.primary",
+                        }}
+                      >
+                        {formatDuration(dayTotal)}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {dayEntries.length > 0 ? (
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell sx={{ fontWeight: "bold" }}>Project</TableCell>
+                            <TableCell sx={{ fontWeight: "bold" }}>Omschrijving</TableCell>
+                            <TableCell align="right" sx={{ fontWeight: "bold" }}>
+                              Duur
+                            </TableCell>
+                            <TableCell width={60}></TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {dayEntries.map((entry) => (
+                            <TableRow key={entry.id} hover>
+                              <TableCell>
+                                <Chip
+                                  label={entry.projects.name}
+                                  size="small"
+                                  sx={{
+                                    backgroundColor: "primary.light",
+                                    color: "primary.dark",
+                                    fontWeight: "bold",
+                                    fontSize: "0.75rem",
+                                  }}
+                                />
+                              </TableCell>
+                              <TableCell>{entry.description}</TableCell>
+                              <TableCell align="right" sx={{ fontWeight: "bold" }}>
+                                {formatDuration(entry.duration_minutes)}
+                              </TableCell>
+                              <TableCell>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleDelete(entry.id)}
+                                  sx={{
+                                    color: "error.main",
+                                    "&:hover": { backgroundColor: "error.light", color: "error.dark" },
+                                  }}
+                                >
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  ) : (
+                    <Box sx={{ py: 2, textAlign: "center" }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                        Geen entries voor deze dag
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
             );
           })}
-        </div>
-      </div>
+        </Box>
+      </Paper>
 
       {/* Entry Modal */}
-      {entryModalOpen && (
-        <div>
-          <div>
-            <div>
-              <div>{editingEntry ? "Entry bewerken" : "Nieuwe Entry"}</div>
-              <button onClick={() => setEntryModalOpen(false)}>×</button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div>
-                <label htmlFor="entry-date">Datum *</label>
-                <input
-                  id="entry-date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  required
-                />
-              </div>
+      <Dialog open={entryModalOpen} onClose={() => setEntryModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Nieuwe entry</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Voeg een nieuwe tijdregistratie toe
+          </Typography>
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <TextField
+              id="entry-date"
+              label="Datum"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+              fullWidth
+              InputLabelProps={{ shrink: true }}
+            />
 
-              <div>
-                <label htmlFor="entry-client">Klant *</label>
-                <select
-                  id="entry-client"
-                  value={selectedClient}
-                  onChange={(e) => handleClientChange(e.target.value)}
-                  required
-                >
-                  <option value="">Selecteer klant</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <FormControl fullWidth required>
+              <InputLabel>Klant</InputLabel>
+              <Select
+                value={selectedClient}
+                onChange={(e) => handleClientChange(e.target.value)}
+                label="Klant"
+              >
+                {clients.map((client) => (
+                  <MenuItem key={client.id} value={client.id}>
+                    {client.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-              <div>
-                <label htmlFor="entry-project">Project *</label>
-                <select
-                  id="entry-project"
-                  value={selectedProject}
-                  onChange={(e) => setSelectedProject(e.target.value)}
-                  required
-                  disabled={!selectedClient}
-                >
-                  <option value="">Selecteer project</option>
-                  {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
-                      {project.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <FormControl fullWidth required disabled={!selectedClient}>
+              <InputLabel>Project</InputLabel>
+              <Select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                label="Project"
+              >
+                {projects.map((project) => (
+                  <MenuItem key={project.id} value={project.id}>
+                    {project.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-              <div>
-                <label htmlFor="entry-description">Omschrijving *</label>
-                <input
-                  id="entry-description"
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  required
-                  placeholder="Wat heb je gedaan?"
-                />
-              </div>
+            <TextField
+              id="entry-description"
+              label="Omschrijving"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+              placeholder="Wat heb je gedaan?"
+              fullWidth
+            />
 
-              <div>
-                <label htmlFor="entry-duration-value">Duur *</label>
-                <input
-                  id="entry-duration-value"
-                  type="number"
-                  step="0.25"
-                  min="0"
-                  value={durationValue}
-                  onChange={(e) => setDurationValue(e.target.value)}
-                  required
-                  placeholder="1.5"
-                />
-                <select
-                  id="entry-duration-unit"
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <TextField
+                id="entry-duration-value"
+                label="Duur"
+                type="number"
+                inputProps={{ step: 0.25, min: 0 }}
+                value={durationValue}
+                onChange={(e) => setDurationValue(e.target.value)}
+                required
+                placeholder="1.5"
+                sx={{ flex: 1 }}
+              />
+              <FormControl sx={{ flex: 1 }}>
+                <InputLabel>Eenheid</InputLabel>
+                <Select
                   value={durationUnit}
                   onChange={(e) => setDurationUnit(e.target.value)}
-                  required
+                  label="Eenheid"
                 >
-                  <option value="minutes">Minuten</option>
-                  <option value="quarter">Kwartier</option>
-                  <option value="hour">Uur</option>
-                  <option value="day">Dag</option>
-                </select>
-              </div>
+                  <MenuItem value="minutes">Minuten</MenuItem>
+                  <MenuItem value="quarter">Kwartier</MenuItem>
+                  <MenuItem value="hour">Uur</MenuItem>
+                  <MenuItem value="day">Dag</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
 
-              {selectedProject && durationValue && (
-                <div>
-                  <div>
-                    Afronding preview:
-                  </div>
-                  <div>
-                    Invoer: {durationValue} {durationUnit}
-                  </div>
-                  <div>
-                    Wordt: {formatDuration(
-                      applyRounding(
-                        parseFloat(durationValue) * (durationUnit === "minutes" ? 1 : durationUnit === "quarter" ? 15 : durationUnit === "hour" ? 60 : 480),
-                        getProjectRoundingRule(selectedProject)
-                      )
-                    )} ({getProjectRoundingRule(selectedProject)})
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <button type="button" onClick={() => setEntryModalOpen(false)}>
-                  Annuleren
-                </button>
-                <button type="submit" disabled={loading}>
-                  {loading ? "Opslaan..." : "Opslaan"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            {selectedProject && durationValue && (
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  backgroundColor: "grey.100",
+                  border: "1px solid",
+                  borderColor: "divider",
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ fontWeight: "bold", mb: 1 }}>
+                  Afronding preview
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Invoer: {durationValue} {durationUnit}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Wordt: {formatDuration(
+                    applyRounding(
+                      parseFloat(durationValue) * (durationUnit === "minutes" ? 1 : durationUnit === "quarter" ? 15 : durationUnit === "hour" ? 60 : 480),
+                      getProjectRoundingRule(selectedProject)
+                    )
+                  )} ({getProjectRoundingRule(selectedProject)})
+                </Typography>
+              </Paper>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setEntryModalOpen(false)}>Annuleren</Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            onClick={handleSubmit}
+            sx={{
+              background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+              "&:hover": {
+                background: "linear-gradient(90deg, #4f46e5 0%, #7e22ce 100%)",
+              },
+            }}
+          >
+            {loading ? "Opslaan..." : "Opslaan"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <TimerSetupDialog
         open={timerSetupOpen}
@@ -639,6 +840,6 @@ export function TimeEntriesView({
           onSave={handleTimerSave}
         />
       )}
-    </div>
+    </Container>
   );
 }

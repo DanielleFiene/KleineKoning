@@ -2,6 +2,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import {
+  Paper,
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  Divider,
+} from "@mui/material";
+import {
+  PlayArrow,
+  Stop,
+  Refresh,
+  Settings,
+} from "@mui/icons-material";
 
 interface TimerState {
   isRunning: boolean;
@@ -46,7 +60,7 @@ export function Timer({
           }
           return parsed;
         } catch {
-          // Invalid JSON, return default
+          // Invalid JSON
         }
       }
     }
@@ -184,62 +198,194 @@ export function Timer({
   const selectedProject = projects.find((p) => p.id === timerState.projectId);
 
   return (
-    <div>
-      <div>
-        <div>Timer</div>
-        <div>Start een timer voor je huidige werk</div>
-      </div>
-      <div>
-        <div>
-          <div>{formatTime(timerState.elapsedSeconds)}</div>
-          <div>{timerState.isRunning ? "Timer loopt..." : "Timer gestopt"}</div>
-        </div>
-
-        {selectedClient && selectedProject && (
-          <div>
-            <div>
-              <span>Klant:</span>
-              <span>{selectedClient.name}</span>
-            </div>
-            <div>
-              <span>Project:</span>
-              <span>{selectedProject.name}</span>
-            </div>
-            {timerState.description && (
-              <div>
-                <span>Omschrijving:</span>
-                <span>{timerState.description}</span>
-              </div>
-            )}
-          </div>
+    <Paper elevation={1} sx={{ overflow: "hidden" }}>
+      <Box
+        sx={{
+          background: "linear-gradient(90deg, #9333ea 0%, #ec4899 100%)",
+          px: 2,
+          py: 1.5,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Typography variant="h6" sx={{ fontWeight: "bold", color: "white" }}>
+          Timer
+        </Typography>
+        {(selectedClient || selectedProject) && (
+          <IconButton
+            size="small"
+            onClick={() => onSetup?.()}
+            sx={{ color: "white", "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" } }}
+          >
+            <Settings fontSize="small" />
+          </IconButton>
         )}
-
-        {(!timerState.clientId || !timerState.projectId) && !timerState.isRunning && (
-          <button onClick={() => onSetup?.()}>
-            Timer Instellen
-          </button>
-        )}
-
-        <div>
-          {!timerState.isRunning ? (
-            <button
-              onClick={handleStart}
-              disabled={!timerState.clientId || !timerState.projectId}
+      </Box>
+      <Box sx={{ p: 2 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box sx={{ textAlign: "center", py: 1 }}>
+            <Typography
+              variant="h3"
+              sx={{
+                fontWeight: "bold",
+                fontFamily: "monospace",
+                mb: 1.5,
+                color: timerState.isRunning ? "secondary.main" : "text.primary",
+              }}
             >
-              Start
-            </button>
-          ) : (
-            <button onClick={handleStop}>
-              Stop
-            </button>
+              {formatTime(timerState.elapsedSeconds)}
+            </Typography>
+            {timerState.isRunning ? (
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.75,
+                  background: "linear-gradient(90deg, rgba(147, 51, 234, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%)",
+                  color: "secondary.main",
+                  borderRadius: "9999px",
+                  fontWeight: "bold",
+                  fontSize: "0.875rem",
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: "secondary.main",
+                    animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+                    "@keyframes pulse": {
+                      "0%, 100%": { opacity: 1 },
+                      "50%": { opacity: 0.5 },
+                    },
+                  }}
+                />
+                Timer loopt...
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary">
+                Timer gestopt
+              </Typography>
+            )}
+          </Box>
+
+          {selectedClient && selectedProject && (
+            <Paper
+              elevation={0}
+              sx={{
+                p: 2,
+                background: "linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%)",
+                border: "1px solid",
+                borderColor: "secondary.light",
+                borderRadius: 2,
+              }}
+            >
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
+                    Klant:
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: "bold", color: "secondary.main" }}>
+                    {selectedClient.name}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
+                    Project:
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: "bold", color: "secondary.main" }}>
+                    {selectedProject.name}
+                  </Typography>
+                </Box>
+                {timerState.description && (
+                  <>
+                    <Divider sx={{ my: 0.5 }} />
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
+                        Omschrijving:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: "medium", textAlign: "right", maxWidth: "60%" }}>
+                        {timerState.description}
+                      </Typography>
+                    </Box>
+                  </>
+                )}
+              </Box>
+            </Paper>
           )}
-          {timerState.elapsedSeconds > 0 && (
-            <button onClick={handleReset}>
-              Reset
-            </button>
+
+          {(!timerState.clientId || !timerState.projectId) && !timerState.isRunning && (
+            <Button
+              onClick={() => onSetup?.()}
+              variant="outlined"
+              fullWidth
+              startIcon={<Settings />}
+              sx={{
+                borderColor: "secondary.light",
+                "&:hover": {
+                  backgroundColor: "secondary.main",
+                  borderColor: "secondary.main",
+                  color: "white",
+                  "& .MuiSvgIcon-root": {
+                    color: "white",
+                  },
+                },
+              }}
+            >
+              Timer instellen
+            </Button>
           )}
-        </div>
-      </div>
-    </div>
+
+          <Box sx={{ display: "flex", gap: 1 }}>
+            {!timerState.isRunning ? (
+              <Button
+                onClick={handleStart}
+                disabled={!timerState.clientId || !timerState.projectId}
+                variant="contained"
+                fullWidth
+                startIcon={<PlayArrow />}
+                sx={{
+                  background: "linear-gradient(90deg, #9333ea 0%, #ec4899 100%)",
+                  "&:hover": {
+                    background: "linear-gradient(90deg, #7e22ce 0%, #db2777 100%)",
+                  },
+                }}
+              >
+                Start
+              </Button>
+            ) : (
+              <Button
+                onClick={handleStop}
+                variant="contained"
+                fullWidth
+                startIcon={<Stop />}
+                sx={{
+                  background: "linear-gradient(90deg, #ef4444 0%, #e11d48 100%)",
+                  "&:hover": {
+                    background: "linear-gradient(90deg, #dc2626 0%, #be185d 100%)",
+                  },
+                }}
+              >
+                Stop
+              </Button>
+            )}
+            {timerState.elapsedSeconds > 0 && (
+              <Button
+                onClick={handleReset}
+                variant="outlined"
+                startIcon={<Refresh />}
+                sx={{ borderColor: "divider", "&:hover": { backgroundColor: "action.hover" } }}
+              >
+                Reset
+              </Button>
+            )}
+          </Box>
+        </Box>
+      </Box>
+    </Paper>
   );
 }

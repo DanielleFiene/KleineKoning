@@ -37,4 +37,5 @@ next-env.d.ts
 
 # history files
 .history/
+**/.history/
 history/

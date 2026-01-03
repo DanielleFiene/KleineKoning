@@ -1,4 +1,3 @@
-// components/exports-view.tsx
 "use client";
 
 import { useState } from "react";
@@ -6,6 +5,30 @@ import { getTimeEntries } from "@/app/actions/time-entries";
 import { createStatement, updateStatementPdfUrl } from "@/app/actions/statements";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { nl } from "date-fns/locale";
+import {
+  Container,
+  Box,
+  Paper,
+  Typography,
+  Button,
+  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Link as MuiLink,
+  IconButton,
+  Chip,
+} from "@mui/material";
+import { ContentCopy, Download } from "@mui/icons-material";
 
 interface Client {
   id: string;
@@ -155,236 +178,280 @@ export function ExportsView({
     : 0;
 
   return (
-    <div>
-      <div>
-        <h1>Export</h1>
-        <p>Genereer PDF urenstaten per klant en periode</p>
-      </div>
+    <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        {/* Page Header */}
+        <Box>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: "bold",
+              background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            Export
+          </Typography>
+        </Box>
 
-      {/* Selectieblok */}
-      <div>
-        <div>
-          <div>Nieuwe Export</div>
-          <div>Selecteer klant en periode</div>
-        </div>
-        <div>
-          <div>
-            <label htmlFor="export-client">Klant *</label>
-            <select
-              id="export-client"
-              value={selectedClient}
-              onChange={(e) => setSelectedClient(e.target.value)}
-              required
-            >
-              <option value="">Selecteer klant</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Selectieblok */}
+        <Paper elevation={1} sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Nieuwe Export
+          </Typography>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <FormControl fullWidth sx={{ maxWidth: 400 }}>
+              <InputLabel id="export-client-label">Klant *</InputLabel>
+              <Select
+                labelId="export-client-label"
+                id="export-client"
+                value={selectedClient}
+                label="Klant *"
+                onChange={(e) => setSelectedClient(e.target.value)}
+              >
+                {clients.map((client) => (
+                  <MenuItem key={client.id} value={client.id}>
+                    {client.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-          <div>
-            <label>Periode *</label>
-            <select
-              value={periodType}
-              onChange={(e) => setPeriodType(e.target.value as "week" | "month" | "custom")}
-            >
-              <option value="week">Week</option>
-              <option value="month">Maand</option>
-              <option value="custom">Aangepast</option>
-            </select>
-          </div>
+            <FormControl fullWidth sx={{ maxWidth: 400 }}>
+              <InputLabel id="period-type-label">Periode *</InputLabel>
+              <Select
+                labelId="period-type-label"
+                id="period-type"
+                value={periodType}
+                label="Periode *"
+                onChange={(e) => setPeriodType(e.target.value as "week" | "month" | "custom")}
+              >
+                <MenuItem value="week">Week</MenuItem>
+                <MenuItem value="month">Maand</MenuItem>
+                <MenuItem value="custom">Aangepast</MenuItem>
+              </Select>
+            </FormControl>
 
-          {periodType === "custom" && (
-            <div>
-              <div>
-                <label htmlFor="custom-start">Van</label>
-                <input
+            {periodType === "custom" && (
+              <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                <TextField
                   id="custom-start"
+                  label="Van"
                   type="date"
                   value={customStart}
                   onChange={(e) => setCustomStart(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ maxWidth: 200 }}
                 />
-              </div>
-              <div>
-                <label htmlFor="custom-end">Tot</label>
-                <input
+                <TextField
                   id="custom-end"
+                  label="Tot"
                   type="date"
                   value={customEnd}
                   onChange={(e) => setCustomEnd(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ maxWidth: 200 }}
                 />
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label>
-              <input
-                type="checkbox"
-                checked={groupByDay}
-                onChange={(e) => setGroupByDay(e.target.checked)}
-              />
-              Groeperen per dag
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={showProjectColumn}
-                onChange={(e) => setShowProjectColumn(e.target.checked)}
-              />
-              Toon projectkolom
-            </label>
-          </div>
-
-          <button onClick={handlePreview} disabled={!selectedClient}>
-            Preview
-          </button>
-        </div>
-      </div>
-
-      {/* Preview */}
-      {previewData && (
-        <div>
-          <div>
-            <div>Preview</div>
-            <div>
-              {previewData.client} - {format(new Date(previewData.period.start), "d MMM", { locale: nl })} tot{" "}
-              {format(new Date(previewData.period.end), "d MMM yyyy", { locale: nl })}
-            </div>
-          </div>
-          <div>
-            <div>
-              <div>Header</div>
-              <div>Klant: {previewData.client}</div>
-              <div>
-                Periode: {format(new Date(previewData.period.start), "d MMM", { locale: nl })} -{" "}
-                {format(new Date(previewData.period.end), "d MMM yyyy", { locale: nl })}
-              </div>
-              <div>Opgesteld op: {format(new Date(), "d MMMM yyyy", { locale: nl })}</div>
-            </div>
-
-            {Object.keys(entriesByDate).length === 0 ? (
-              <div>
-                <p>Geen entries in deze periode</p>
-              </div>
-            ) : (
-              <div>
-                {Object.entries(entriesByDate).map(([date, dayEntries]: [string, any]) => {
-                  const dayTotal = dayEntries.reduce(
-                    (sum: number, e: any) => sum + e.duration_minutes,
-                    0
-                  );
-                  return (
-                    <div key={date}>
-                      <div>
-                        <div>{format(new Date(date), "EEEE d MMMM", { locale: nl })}</div>
-                        <div>Totaal: {formatDuration(dayTotal)}</div>
-                      </div>
-                      <div>
-                        <table>
-                          <thead>
-                            <tr>
-                              {showProjectColumn && <th>Project</th>}
-                              <th>Omschrijving</th>
-                              <th>Duur</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {dayEntries.map((entry: any) => (
-                              <tr key={entry.id}>
-                                {showProjectColumn && <td>{entry.projects?.name || "-"}</td>}
-                                <td>{entry.description}</td>
-                                <td>{formatDuration(entry.duration_minutes)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div>
-                  <div>
-                    <span>Periodetotaal</span>
-                    <span>{formatDuration(periodTotal)}</span>
-                  </div>
-                </div>
-              </div>
+              </Box>
             )}
 
-            {/* Acties */}
-            <div>
-              <button onClick={handleGeneratePDF} disabled={generating}>
-                {generating ? "PDF genereren..." : "Genereer PDF"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={groupByDay}
+                    onChange={(e) => setGroupByDay(e.target.checked)}
+                  />
+                }
+                label="Groeperen per dag"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={showProjectColumn}
+                    onChange={(e) => setShowProjectColumn(e.target.checked)}
+                  />
+                }
+                label="Toon projectkolom"
+              />
+            </Box>
 
-      {/* Statement lijst */}
-      <div>
-        <div>
-          <div>Gegenereerde Statements</div>
-          <div>Alle gegenereerde urenstaten</div>
-        </div>
-        <div>
+            <Button
+              onClick={handlePreview}
+              disabled={!selectedClient}
+              variant="contained"
+              sx={{ alignSelf: "flex-start" }}
+            >
+              Preview
+            </Button>
+          </Box>
+        </Paper>
+
+        {/* Preview */}
+        {previewData && (
+          <Paper elevation={1} sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+              Preview
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              {previewData.client} - {format(new Date(previewData.period.start), "d MMM", { locale: nl })} tot{" "}
+              {format(new Date(previewData.period.end), "d MMM yyyy", { locale: nl })}
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              <Box sx={{ p: 2, backgroundColor: "grey.50", borderRadius: 1 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Header</Typography>
+                <Typography variant="body2">Klant: {previewData.client}</Typography>
+                <Typography variant="body2">
+                  Periode: {format(new Date(previewData.period.start), "d MMM", { locale: nl })} -{" "}
+                  {format(new Date(previewData.period.end), "d MMM yyyy", { locale: nl })}
+                </Typography>
+                <Typography variant="body2">Opgesteld op: {format(new Date(), "d MMMM yyyy", { locale: nl })}</Typography>
+              </Box>
+
+              {Object.keys(entriesByDate).length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Geen entries in deze periode
+                </Typography>
+              ) : (
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                  {Object.entries(entriesByDate).map(([date, dayEntries]: [string, any]) => {
+                    const dayTotal = dayEntries.reduce(
+                      (sum: number, e: any) => sum + e.duration_minutes,
+                      0
+                    );
+                    return (
+                      <Box key={date} sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
+                        <Box sx={{ p: 2, backgroundColor: "grey.100", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <Typography variant="subtitle2" fontWeight={600}>
+                            {format(new Date(date), "EEEE d MMMM", { locale: nl })}
+                          </Typography>
+                          <Chip label={`Totaal: ${formatDuration(dayTotal)}`} size="small" color="primary" />
+                        </Box>
+                        <TableContainer>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                {showProjectColumn && (
+                                  <TableCell sx={{ fontWeight: 600 }}>Project</TableCell>
+                                )}
+                                <TableCell sx={{ fontWeight: 600 }}>Omschrijving</TableCell>
+                                <TableCell sx={{ fontWeight: 600 }}>Duur</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {dayEntries.map((entry: any) => (
+                                <TableRow key={entry.id}>
+                                  {showProjectColumn && (
+                                    <TableCell>{entry.projects?.name || "-"}</TableCell>
+                                  )}
+                                  <TableCell>{entry.description}</TableCell>
+                                  <TableCell>{formatDuration(entry.duration_minutes)}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </TableContainer>
+                      </Box>
+                    );
+                  })}
+                  <Box sx={{ p: 2, backgroundColor: "primary.main", color: "white", borderRadius: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Periodetotaal
+                    </Typography>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {formatDuration(periodTotal)}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
+
+              {/* Acties */}
+              <Box>
+                <Button
+                  onClick={handleGeneratePDF}
+                  disabled={generating}
+                  variant="contained"
+                  startIcon={generating ? undefined : <Download />}
+                >
+                  {generating ? "PDF genereren..." : "Genereer PDF"}
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        )}
+
+        {/* Statement lijst */}
+        <Paper elevation={1} sx={{ p: 3 }}>
+          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+            Gegenereerde Statements
+          </Typography>
           {statements.length === 0 ? (
-            <p>Nog geen statements gegenereerd</p>
+            <Typography variant="body2" color="text.secondary">
+              Nog geen statements gegenereerd
+            </Typography>
           ) : (
-            <div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Statement #</th>
-                    <th>Klant</th>
-                    <th>Periode</th>
-                    <th>Aangemaakt op</th>
-                    <th>Acties</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 600 }}>Statement #</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Klant</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Periode</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Aangemaakt op</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Acties</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {statements.map((statement) => (
-                    <tr key={statement.id}>
-                      <td>{statement.statement_number}</td>
-                      <td>{statement.clients.name}</td>
-                      <td>
+                    <TableRow key={statement.id}>
+                      <TableCell>{statement.statement_number}</TableCell>
+                      <TableCell>{statement.clients.name}</TableCell>
+                      <TableCell>
                         {format(new Date(statement.period_start), "d MMM", { locale: nl })} -{" "}
                         {format(new Date(statement.period_end), "d MMM yyyy", { locale: nl })}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {format(new Date(statement.generated_at), "d MMM yyyy HH:mm", { locale: nl })}
-                      </td>
-                      <td>
+                      </TableCell>
+                      <TableCell>
                         {statement.pdf_url ? (
-                          <div>
-                            <a href={statement.pdf_url} target="_blank" rel="noopener noreferrer">
+                          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                            <MuiLink
+                              href={statement.pdf_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                            >
+                              <Download fontSize="small" />
                               Download PDF
-                            </a>
-                            <button
+                            </MuiLink>
+                            <IconButton
+                              size="small"
                               onClick={() => {
                                 navigator.clipboard.writeText(statement.pdf_url || "");
                                 alert("Link gekopieerd!");
                               }}
+                              title="Kopieer link"
                             >
-                              Kopieer link
-                            </button>
-                          </div>
+                              <ContentCopy fontSize="small" />
+                            </IconButton>
+                          </Box>
                         ) : (
-                          <span>Geen PDF</span>
+                          <Typography variant="body2" color="text.secondary">
+                            Geen PDF
+                          </Typography>
                         )}
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </TableContainer>
           )}
-        </div>
-      </div>
-    </div>
+        </Paper>
+      </Box>
+    </Container>
   );
 }

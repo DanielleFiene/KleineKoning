@@ -78,10 +78,10 @@ export function ProjectForm({
             : "Voeg een nieuw project toe aan een klant"}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4">
         <form action={formAction} className="space-y-4">
           <div className="space-y-2 max-w-md">
-            <Label htmlFor="client_id">Klant *</Label>
+            <Label htmlFor="client_id" className="text-sm text-slate-900">Klant *</Label>
             <Select
               name="client_id"
               defaultValue={project?.client_id || defaultClientId || ""}
@@ -102,7 +102,7 @@ export function ProjectForm({
           </div>
 
           <div className="space-y-2 max-w-md">
-            <Label htmlFor="name">Naam *</Label>
+            <Label htmlFor="name" className="text-sm text-slate-900">Naam *</Label>
             <Input
               id="name"
               name="name"
@@ -113,7 +113,7 @@ export function ProjectForm({
           </div>
 
           <div className="space-y-2 max-w-md">
-            <Label htmlFor="rate_ex_btw">Tarief (ex BTW)</Label>
+            <Label htmlFor="rate_ex_btw" className="text-sm text-slate-900">Tarief (ex BTW)</Label>
             <Input
               id="rate_ex_btw"
               name="rate_ex_btw"
@@ -123,13 +123,13 @@ export function ProjectForm({
               defaultValue={project?.rate_ex_btw || ""}
               placeholder="0.00"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-slate-500">
               Intern tarief, niet zichtbaar in exports
             </p>
           </div>
 
           <div className="space-y-2 max-w-md">
-            <Label htmlFor="default_unit">Standaard Unit *</Label>
+            <Label htmlFor="default_unit" className="text-sm text-slate-900">Standaard Unit *</Label>
             <Select
               name="default_unit"
               defaultValue={project?.default_unit || "minutes"}
@@ -148,7 +148,7 @@ export function ProjectForm({
           </div>
 
           <div className="space-y-2 max-w-md">
-            <Label htmlFor="rounding_rule">Afrondingsregel *</Label>
+            <Label htmlFor="rounding_rule" className="text-sm text-slate-900">Afrondingsregel *</Label>
             <Select
               name="rounding_rule"
               defaultValue={project?.rounding_rule || "none"}
@@ -164,7 +164,7 @@ export function ProjectForm({
                 <SelectItem value="down15">Naar beneden afronden (15 min)</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-slate-500">
               Wordt toegepast bij het opslaan van tijdentries
             </p>
           </div>

@@ -12,13 +12,15 @@ export default async function NewProjectPage({
   const clients = await getClients();
 
   return (
-    <div>
-      <div>
-        <h1>Nieuw Project</h1>
-        <p>
-          Voeg een nieuw project toe aan een klant
-        </p>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-slate-900">Nieuw Project</h1>
+        </div>
       </div>
+
+      {/* Content Card */}
       <ProjectForm clients={clients} defaultClientId={params.client_id} />
     </div>
   );

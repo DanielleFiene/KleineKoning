@@ -12,37 +12,33 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Add, Search } from "@mui/icons-material";
 import { ClientSearch } from "@/components/client-search";
 
 export default async function ClientsPage() {
   const clients = await getClients();
 
   return (
-    <div>
-      <div>
+    <div className="p-6 max-w-6xl mx-auto space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1>Klanten</h1>
-          <p>
-            Beheer je klanten en hun BTW-profielen
-          </p>
+          <h1 className="text-2xl font-semibold text-slate-900">Klanten</h1>
         </div>
         <Link href="/clients/new">
           <Button>
-            <Plus />
+            <Add />
             Nieuwe Klant
           </Button>
         </Link>
       </div>
 
+      {/* Content Card */}
       <Card>
-        <CardHeader>
-          <CardTitle>Klantenlijst</CardTitle>
-          <CardDescription>
-            Alle klanten die je hebt toegevoegd
-          </CardDescription>
+        <CardHeader className="p-4">
+          <CardTitle className="text-lg font-medium text-slate-900">Klantenlijst</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
           <ClientSearch initialClients={clients} />
         </CardContent>
       </Card>

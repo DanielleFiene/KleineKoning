@@ -1,10 +1,20 @@
-// components/client-search.tsx
 "use client";
 
 import { useState } from "react";
 import { deleteClient } from "@/app/actions/clients";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface Client {
   id: string;
@@ -38,10 +48,10 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
   };
 
   return (
-    <div>
-      <div>
-        <label htmlFor="client-search">Zoeken</label>
-        <input
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="client-search">Zoeken</Label>
+        <Input
           id="client-search"
           type="text"
           value={search}
@@ -51,43 +61,45 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
       </div>
 
       {filteredClients.length === 0 ? (
-        <div>
-          <p>Geen klanten gevonden</p>
-        </div>
+        <p className="text-sm text-slate-600">Geen klanten gevonden</p>
       ) : (
-        <div>
-          <table>
-            <thead>
-              <tr>
-                <th>Naam</th>
-                <th>BTW Profiel</th>
-                <th>Acties</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClients.map((client) => (
-                <tr key={client.id}>
-                  <td>
-                    <Link href={`/clients/${client.id}`}>
-                      {client.name}
-                    </Link>
-                  </td>
-                  <td>
-                    {client.btw_profile.label} ({client.btw_profile.percentage}%)
-                  </td>
-                  <td>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Naam</TableHead>
+              <TableHead>BTW Profiel</TableHead>
+              <TableHead>Acties</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredClients.map((client) => (
+              <TableRow key={client.id}>
+                <TableCell className="text-sm text-slate-900">
+                  <Link href={`/clients/${client.id}`} className="hover:text-indigo-600">
+                    {client.name}
+                  </Link>
+                </TableCell>
+                <TableCell className="text-sm text-slate-900">
+                  {client.btw_profile.label} ({client.btw_profile.percentage}%)
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
                     <Link href={`/clients/${client.id}/edit`}>
-                      <button>Bewerken</button>
+                      <Button variant="ghost" size="sm">Bewerken</Button>
                     </Link>
-                    <button onClick={() => handleDelete(client.id)}>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(client.id)}
+                    >
                       Verwijderen
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
     </div>
   );

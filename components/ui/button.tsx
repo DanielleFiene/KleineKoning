@@ -6,20 +6,20 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow hover:bg-primary/90 hover:scale-[1.02] hover:shadow-md active:scale-[0.98]",
+          "bg-indigo-600 text-white hover:bg-indigo-700",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 hover:scale-[1.02] hover:shadow-md active:scale-[0.98]",
+          "bg-rose-600 text-white hover:bg-rose-700",
         outline:
-          "border-2 border-input bg-transparent shadow-sm hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] hover:shadow-md active:scale-[0.98]",
+          "border border-slate-200 bg-transparent hover:bg-slate-100 text-slate-900",
         secondary:
-          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 hover:scale-[1.02] hover:shadow-md active:scale-[0.98]",
-        ghost: "hover:bg-accent hover:text-accent-foreground hover:scale-[1.02] active:scale-[0.98]",
-        link: "text-primary underline-offset-4 hover:underline hover:text-primary/80",
+          "bg-slate-100 text-slate-900 hover:bg-slate-200",
+        ghost: "hover:bg-slate-100 text-slate-900",
+        link: "text-indigo-600 underline-offset-4 hover:underline hover:text-indigo-700",
       },
       size: {
         default: "h-12 px-6 py-3 min-w-[120px] font-semibold", // 12px vertical, 24px horizontal
