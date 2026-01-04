@@ -1,8 +1,9 @@
-// proxy.ts
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function proxy(request: NextRequest) {
+export const runtime = 'edge';
+
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -68,7 +69,4 @@ export const config = {
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
-
-
-
 
