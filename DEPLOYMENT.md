@@ -18,6 +18,7 @@
    - **Build command**: `npm run build`
    - **Build output directory**: `.next`
    - **Root directory**: `/` (of de root van je project)
+   - **Node.js version**: Cloudflare Pages detecteert automatisch Node.js 20.x via `.nvmrc` of `package.json` engines field
 
 ### 3. Environment Variables
 
@@ -101,6 +102,7 @@ Na deployment, test het volgende:
 - Check of alle dependencies zijn geïnstalleerd
 - Check of environment variables zijn ingesteld
 - Check build logs in Cloudflare Dashboard
+- **Node.js versie**: Zorg dat Node.js >= 20.9.0 wordt gebruikt (zie `.nvmrc` of `package.json` engines)
 
 ### Auth Redirect Issues
 
