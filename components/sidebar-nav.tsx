@@ -21,28 +21,28 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Box, Typography, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
-import { AccessTime, CloudDownload, Diversity3, Assignment } from "@mui/icons-material";
+import { Clock, DownloadCloud, Users, FileText } from "lucide-react";
 
 const menuItems = [
   {
     title: "Tijd",
     url: "/time",
-    icon: AccessTime,
+    icon: Clock,
   },
   {
     title: "Export",
     url: "/exports",
-    icon: CloudDownload,
+    icon: DownloadCloud,
   },
   {
     title: "Klanten",
     url: "/clients",
-    icon: Diversity3,
+    icon: Users,
   },
   {
     title: "Projecten",
     url: "/projects",
-    icon: Assignment,
+    icon: FileText,
   },
 ];
 

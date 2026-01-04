@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { Close } from "@mui/icons-material"
+import { X as Close } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 

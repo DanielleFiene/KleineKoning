@@ -15,7 +15,7 @@ import {
   TableRow,
   IconButton,
 } from "@mui/material";
-import { Add, Edit } from "@mui/icons-material";
+import { Plus, Edit } from "lucide-react";
 import Link from "next/link";
 
 export const runtime = 'edge';
@@ -54,12 +54,12 @@ export default async function ClientDetailPage({
           </Box>
           <Box sx={{ display: "flex", gap: 2 }}>
             <Link href={`/clients/${id}/edit`} style={{ textDecoration: "none" }}>
-              <Button variant="outlined" startIcon={<Edit />}>
+              <Button variant="outlined" startIcon={<Edit size={18} />}>
                 Bewerken
               </Button>
             </Link>
             <Link href={`/projects/new?client_id=${id}`} style={{ textDecoration: "none" }}>
-              <Button variant="contained" startIcon={<Add />}>
+              <Button variant="contained" startIcon={<Plus size={18} />}>
                 Nieuw Project
               </Button>
             </Link>
@@ -117,7 +117,7 @@ export default async function ClientDetailPage({
                       <TableCell>
                         <Link href={`/projects/${project.id}/edit`} style={{ textDecoration: "none" }}>
                           <IconButton size="small" title="Bewerken">
-                            <Edit fontSize="small" />
+                            <Edit size={18} />
                           </IconButton>
                         </Link>
                       </TableCell>

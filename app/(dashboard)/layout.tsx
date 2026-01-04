@@ -12,7 +12,7 @@ import { UserMenu } from "@/components/user-menu";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { Box, AppBar, Toolbar, IconButton, useMediaQuery, useTheme } from "@mui/material";
-import { Menu as MenuIcon } from "@mui/icons-material";
+import { Menu as MenuIcon } from "lucide-react";
 import { ToastProvider } from "@/components/toast-provider";
 import { AppFooter } from "@/components/app-footer";
 import { useState, useEffect } from "react";
@@ -29,7 +29,7 @@ function SidebarToggleButton() {
   
   return (
     <IconButton edge="start" onClick={toggleSidebar} sx={{ mr: 2 }}>
-      <MenuIcon />
+      <MenuIcon size={24} />
     </IconButton>
   );
 }

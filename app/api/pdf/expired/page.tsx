@@ -1,9 +1,15 @@
+/**
+ * app/api/pdf/expired/page.tsx
+ * 
+ * Error page die wordt getoond wanneer een PDF signed URL is verlopen (na 7 dagen).
+ * Toont een duidelijke foutmelding met uitleg en acties (inloggen, naar dashboard).
+ */
 "use client";
 
 import { Box, Container, Typography, Button, Paper } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import Link from "next/link";
-import { ErrorOutline } from "@mui/icons-material";
+import { AlertCircle } from "lucide-react";
 
 export default function ExpiredLinkPage() {
   const theme = useTheme();
@@ -32,11 +38,11 @@ export default function ExpiredLinkPage() {
             backgroundColor: isDark ? "rgba(30, 30, 30, 0.95)" : "rgba(255, 255, 255, 0.95)",
           }}
         >
-          <ErrorOutline
-            sx={{
-              fontSize: 64,
-              color: "error.main",
-              mb: 2,
+          <AlertCircle
+            size={64}
+            style={{
+              color: theme.palette.error.main,
+              marginBottom: 16,
             }}
           />
           <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
@@ -75,4 +81,3 @@ export default function ExpiredLinkPage() {
     </Box>
   );
 }
-

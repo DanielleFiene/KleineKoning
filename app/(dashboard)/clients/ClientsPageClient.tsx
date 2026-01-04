@@ -7,7 +7,7 @@
 "use client";
 
 import { Container, Box, Typography, Button, Paper, Tooltip } from "@mui/material";
-import { Add, Info } from "@mui/icons-material";
+import { Plus, Info } from "lucide-react";
 import Link from "next/link";
 import { ClientSearch } from "@/components/client-search";
 
@@ -35,11 +35,11 @@ export default function ClientsPageClient({ clients }: ClientsPageClientProps) {
               Klanten
             </Typography>
             <Tooltip title="Beheer je klanten. Voeg klanten toe, bewerk BTW-profielen en tarieven. Voor internationale klanten kun je een handmatig tarief instellen.">
-              <Info sx={{ color: "text.secondary", fontSize: 20, cursor: "help" }} />
+              <Info size={20} style={{ color: "inherit", cursor: "help" }} />
             </Tooltip>
           </Box>
           <Link href="/clients/new" style={{ textDecoration: "none" }}>
-            <Button variant="contained" startIcon={<Add />}>
+            <Button variant="contained" startIcon={<Plus size={18} />}>
               Nieuwe Klant
             </Button>
           </Link>

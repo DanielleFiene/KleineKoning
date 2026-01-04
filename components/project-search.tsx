@@ -39,7 +39,7 @@ import {
   InputAdornment,
   Chip,
 } from "@mui/material";
-import { Edit, Delete, Search, GetApp, FilterList } from "@mui/icons-material";
+import { Edit, Trash2, Search, Download, Filter } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 
 interface Project {
@@ -277,7 +277,7 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
             value={clientFilter}
             label="Klant"
             onChange={(e) => setClientFilter(e.target.value)}
-            startAdornment={<FilterList sx={{ mr: 1, fontSize: 18 }} />}
+            startAdornment={<Filter size={18} style={{ marginRight: 8 }} />}
           >
             <MenuItem value="all">Alle klanten</MenuItem>
             {clients.map((client) => (
@@ -319,7 +319,7 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
             <MenuItem value="activity">Laatste Activiteit</MenuItem>
           </Select>
         </FormControl>
-        <Button variant="outlined" startIcon={<GetApp />} onClick={handleExportCSV} size="small">
+        <Button variant="outlined" startIcon={<Download size={18} />} onClick={handleExportCSV} size="small">
           Export CSV
         </Button>
         {selectedProjects.size > 0 && (
@@ -427,7 +427,7 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
                     <Box sx={{ display: "flex", gap: 1 }}>
                       <Link href={`/projects/${project.id}/edit`} style={{ textDecoration: "none" }}>
                         <IconButton size="small" title="Bewerken">
-                          <Edit fontSize="small" />
+                          <Edit size={18} />
                         </IconButton>
                       </Link>
                       <IconButton
@@ -436,7 +436,7 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
                         color="error"
                         title="Verwijderen"
                       >
-                        <Delete fontSize="small" />
+                        <Trash2 size={18} />
                       </IconButton>
                     </Box>
                   </TableCell>

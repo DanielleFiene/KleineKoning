@@ -1,7 +1,7 @@
 "use client";
 
 import { Tooltip, IconButton, Box } from "@mui/material";
-import { Info } from "@mui/icons-material";
+import { Info } from "lucide-react";
 
 interface InfoIconProps {
   title: string;
@@ -67,7 +67,7 @@ export function InfoIcon({ title, size = "medium" }: InfoIconProps) {
           transition: "all 0.2s ease",
         }}
       >
-        <Info sx={{ fontSize: iconSize }} />
+        <Info size={iconSize} />
       </IconButton>
     </Tooltip>
   );

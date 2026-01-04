@@ -7,7 +7,7 @@ import {
   Button,
   Paper,
 } from "@mui/material";
-import { Edit } from "@mui/icons-material";
+import { Edit } from "lucide-react";
 import Link from "next/link";
 
 export const runtime = 'edge';
@@ -44,7 +44,7 @@ export default async function ProjectDetailPage({
             </Typography>
           </Box>
           <Link href={`/projects/${id}/edit`} style={{ textDecoration: "none" }}>
-            <Button variant="outlined" startIcon={<Edit />}>
+            <Button variant="outlined" startIcon={<Edit size={18} />}>
               Bewerken
             </Button>
           </Link>

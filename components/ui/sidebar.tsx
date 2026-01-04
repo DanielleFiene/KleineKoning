@@ -3,7 +3,7 @@
 
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
-import { Menu as MenuIcon } from "@mui/icons-material"
+import { Menu as MenuIcon } from "lucide-react"
 import { Box, IconButton, Drawer, useMediaQuery, useTheme } from "@mui/material"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -296,7 +296,7 @@ const SidebarTrigger = React.forwardRef<
       {...props}
       sx={{ width: 28, height: 28, ...props.sx }}
     >
-      <MenuIcon />
+      <MenuIcon size={24} />
       <Box component="span" sx={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0, 0, 0, 0)", whiteSpace: "nowrap", borderWidth: 0 }}>
         Toggle Sidebar
       </Box>

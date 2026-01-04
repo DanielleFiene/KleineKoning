@@ -8,7 +8,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { Button, IconButton, Tooltip, Box } from "@mui/material";
-import { Logout, LightMode, DarkMode } from "@mui/icons-material";
+import { LogOut, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface UserMenuProps {
@@ -31,7 +31,7 @@ export function UserMenu({ onToggleTheme, themeMode = "light" }: UserMenuProps) 
       {onToggleTheme && (
         <Tooltip title={themeMode === "light" ? "Donker thema" : "Licht thema"}>
           <IconButton onClick={onToggleTheme} size="small" color="inherit">
-            {themeMode === "light" ? <DarkMode /> : <LightMode />}
+            {themeMode === "light" ? <Moon size={18} /> : <Sun size={18} />}
           </IconButton>
         </Tooltip>
       )}
@@ -39,7 +39,7 @@ export function UserMenu({ onToggleTheme, themeMode = "light" }: UserMenuProps) 
         variant="text"
         size="small"
         onClick={handleLogout}
-        startIcon={<Logout />}
+        startIcon={<LogOut size={18} />}
       >
         Uitloggen
       </Button>

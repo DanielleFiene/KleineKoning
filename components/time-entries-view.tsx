@@ -44,7 +44,7 @@ import {
   Tooltip,
   Checkbox,
 } from "@mui/material";
-import { ChevronLeft, ChevronRight, Add, Delete, ContentCopy, Search, Edit, CalendarToday, Info } from "@mui/icons-material";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Copy, Search, Edit, Calendar, Info } from "lucide-react";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -838,7 +838,7 @@ export function TimeEntriesView({
           <Button
             variant="contained"
             onClick={openEntryModal}
-            startIcon={<Add />}
+            startIcon={<Plus size={18} />}
             sx={{
               flex: { xs: 1, sm: "none" },
               background: "linear-gradient(90deg, #6366f1 0%, #9333ea 100%)",
@@ -857,7 +857,7 @@ export function TimeEntriesView({
         <Box sx={{ display: "flex", flexDirection: { xs: "column", lg: "row" }, gap: 3 }}>
           <Box sx={{ flex: { xs: "1", lg: "2" }, display: "flex", alignItems: "center", justifyContent: "center", gap: 2 }}>
             <IconButton onClick={() => navigateWeek("prev")} size="small">
-              <ChevronLeft />
+              <ChevronLeft size={20} />
             </IconButton>
             <Box sx={{ textAlign: "center", flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -919,7 +919,7 @@ export function TimeEntriesView({
               </Typography>
             </Box>
             <IconButton onClick={() => navigateWeek("next")} size="small">
-              <ChevronRight />
+              <ChevronRight size={20} />
             </IconButton>
           </Box>
           <Box
@@ -990,7 +990,7 @@ export function TimeEntriesView({
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-            <Search sx={{ color: (theme) => theme.palette.mode === 'dark' ? 'info.light' : 'info.dark' }} />
+            <Search size={20} style={{ color: 'inherit' }} />
             <Typography 
               variant="body2" 
               fontWeight={600}
@@ -1078,7 +1078,7 @@ export function TimeEntriesView({
                 >
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, flex: 1, minWidth: 0 }}>
-                      <CalendarToday fontSize="small" color={isCurrentWeek ? "primary" : "action"} />
+                      <Calendar size={18} style={{ color: isCurrentWeek ? undefined : 'inherit' }} />
                       <Box sx={{ minWidth: 0, flex: 1 }}>
                         <Typography variant="body2" fontWeight={500} noWrap>
                           {format(entryDate, "EEEE d MMMM yyyy", { locale: nl })}
@@ -1124,7 +1124,7 @@ export function TimeEntriesView({
           }}
         >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Search sx={{ color: (theme) => theme.palette.mode === 'dark' ? 'warning.light' : 'warning.dark' }} />
+            <Search size={20} style={{ color: 'inherit' }} />
             <Typography 
               variant="body2"
               sx={{ 
@@ -1174,7 +1174,7 @@ export function TimeEntriesView({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   InputProps={{
-                    startAdornment: <Search sx={{ mr: 1, color: "text.secondary" }} />,
+                    startAdornment: <Search size={18} style={{ marginRight: 8, color: 'inherit' }} />,
                   }}
                   fullWidth
                   size="small"
@@ -1456,7 +1456,7 @@ export function TimeEntriesView({
                                       "&:hover": { backgroundColor: "primary.light", color: "primary.dark" },
                                     }}
                                   >
-                                    <ContentCopy fontSize="small" />
+                                    <Copy size={18} />
                                   </IconButton>
                                   <IconButton
                                     size="small"
@@ -1467,7 +1467,7 @@ export function TimeEntriesView({
                                       "&:hover": { backgroundColor: "error.light", color: "error.dark" },
                                     }}
                                   >
-                                    <Delete fontSize="small" />
+                                    <Trash2 size={18} />
                                   </IconButton>
                                 </Box>
                               </TableCell>

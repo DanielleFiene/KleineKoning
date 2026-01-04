@@ -40,7 +40,7 @@ import {
   DialogContent,
   DialogActions,
 } from "@mui/material";
-import { ContentCopy, Download, Email, Add, Delete as DeleteIcon } from "@mui/icons-material";
+import { Copy, Download, Mail, Plus, Trash2 } from "lucide-react";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -599,7 +599,7 @@ export function ExportsView({
                       }}
                       variant="outlined"
                       disabled={generating || !previewData}
-                      startIcon={<Email />}
+                      startIcon={<Mail size={18} />}
                     >
                       Mailen
                     </Button>
@@ -625,7 +625,7 @@ export function ExportsView({
                   size="small"
                   color="error"
                   variant="outlined"
-                  startIcon={<DeleteIcon />}
+                                startIcon={<Trash2 size={18} />}
                   onClick={() => {
                     const message = `Weet je zeker dat je ${selectedStatements.size} statement(s) wilt verwijderen?\n\n⚠️ Let op: Deze actie kan niet ongedaan worden gemaakt. Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.`;
                     if (confirm(message)) {
@@ -706,7 +706,7 @@ export function ExportsView({
                             <>
                               <Button
                                 size="small"
-                                startIcon={<Download />}
+                                startIcon={<Download size={18} />}
                                 onClick={() => {
                                   // Use API route for reliable PDF download
                                   window.open(`/api/pdf/${statement.id}`, '_blank');
@@ -741,11 +741,11 @@ export function ExportsView({
                                 }}
                                 title="Kopieer link (7 dagen geldig)"
                               >
-                                <ContentCopy fontSize="small" />
+                                <Copy size={18} />
                               </IconButton>
                               <Button
                                 size="small"
-                                startIcon={<Email />}
+                                startIcon={<Mail size={18} />}
                                 onClick={() => {
                                   setSelectedStatement(statement);
                                   // Generate default message
@@ -789,7 +789,7 @@ export function ExportsView({
                             }}
                             title="Verwijderen"
                           >
-                            <DeleteIcon fontSize="small" />
+                            <Trash2 size={18} />
                           </IconButton>
                         </Box>
                       </TableCell>
@@ -841,13 +841,13 @@ export function ExportsView({
                         }}
                         size="small"
                       >
-                        <DeleteIcon />
+                        <Trash2 size={18} />
                       </IconButton>
                     )}
                   </Box>
                 ))}
                 <Button
-                  startIcon={<Add />}
+                                startIcon={<Plus size={18} />}
                   onClick={() => setEmailAddresses([...emailAddresses, ""])}
                   size="small"
                   sx={{ mt: 1, color: "text.primary" }}
@@ -984,7 +984,7 @@ export function ExportsView({
               }}
               variant="contained"
               disabled={sendingEmail || emailAddresses.every(email => !email.trim() || !email.includes("@"))}
-              startIcon={<Email />}
+              startIcon={<Mail size={18} />}
             >
               {sendingEmail ? "Verzenden..." : "Verstuur"}
             </Button>

@@ -40,7 +40,7 @@ import {
   Chip,
   Tooltip,
 } from "@mui/material";
-import { Edit, Delete, Add, Search, GetApp, FilterList, Info } from "@mui/icons-material";
+import { Edit, Trash2, Plus, Search, Download, Filter, Info } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 
 interface Client {
@@ -256,7 +256,7 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
             value={btwFilter}
             label="BTW Profiel"
             onChange={(e) => setBtwFilter(e.target.value)}
-            startAdornment={<FilterList sx={{ mr: 1, fontSize: 18 }} />}
+            startAdornment={<Filter size={18} style={{ marginRight: 8 }} />}
           >
             <MenuItem value="all">Alle profielen</MenuItem>
             {btwProfiles.map((profile) => (
@@ -274,7 +274,7 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
             <MenuItem value="activity">Laatste Activiteit</MenuItem>
           </Select>
         </FormControl>
-        <Button variant="outlined" startIcon={<GetApp />} onClick={handleExportCSV} size="small">
+        <Button variant="outlined" startIcon={<Download size={18} />} onClick={handleExportCSV} size="small">
           Export CSV
         </Button>
         {selectedClients.size > 0 && (
@@ -371,12 +371,12 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
                     <Box sx={{ display: "flex", gap: 1 }}>
                       <Link href={`/projects/new?client_id=${client.id}`} style={{ textDecoration: "none" }}>
                         <IconButton size="small" title="Nieuw Project" color="primary">
-                          <Add fontSize="small" />
+                          <Plus size={18} />
                         </IconButton>
                       </Link>
                       <Link href={`/clients/${client.id}/edit`} style={{ textDecoration: "none" }}>
                         <IconButton size="small" title="Bewerken">
-                          <Edit fontSize="small" />
+                          <Edit size={18} />
                         </IconButton>
                       </Link>
                       <IconButton
@@ -385,7 +385,7 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
                         color="error"
                         title="Verwijderen"
                       >
-                        <Delete fontSize="small" />
+                        <Trash2 size={18} />
                       </IconButton>
                     </Box>
                   </TableCell>

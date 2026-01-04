@@ -8,7 +8,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from "react";
 import { Snackbar, Alert, AlertColor, IconButton } from "@mui/material";
-import { Close as CloseIcon } from "@mui/icons-material";
+import { X as CloseIcon } from "lucide-react";
 
 interface ToastContextType {
   showToast: (message: string, severity?: AlertColor, duration?: number) => void;
@@ -92,7 +92,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               onClick={handleClose}
               sx={{ ml: 1 }}
             >
-              <CloseIcon fontSize="small" />
+              <CloseIcon size={18} />
             </IconButton>
           }
         >

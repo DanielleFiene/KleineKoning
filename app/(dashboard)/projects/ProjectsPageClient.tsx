@@ -7,7 +7,7 @@
 "use client";
 
 import { Container, Box, Typography, Button, Paper, Tooltip } from "@mui/material";
-import { Add, Info } from "@mui/icons-material";
+import { Plus, Info } from "lucide-react";
 import Link from "next/link";
 import { ProjectSearch } from "@/components/project-search";
 
@@ -36,11 +36,11 @@ export default function ProjectsPageClient({ projects, clients }: ProjectsPageCl
               Projecten
             </Typography>
             <Tooltip title="Beheer je projecten per klant. Stel standaard units in (minuten/kwartier/uur/dag), afrondingsregels en optionele tarieven. Het tarief is per standaard unit (bijv. €75/uur).">
-              <Info sx={{ color: "text.secondary", fontSize: 20, cursor: "help" }} />
+              <Info size={20} style={{ color: "inherit", cursor: "help" }} />
             </Tooltip>
           </Box>
           <Link href="/projects/new" style={{ textDecoration: "none" }}>
-            <Button variant="contained" startIcon={<Add />}>
+            <Button variant="contained" startIcon={<Plus size={18} />}>
               Nieuw Project
             </Button>
           </Link>

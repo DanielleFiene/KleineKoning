@@ -17,11 +17,11 @@ import {
   Divider,
 } from "@mui/material";
 import {
-  PlayArrow,
-  Stop,
-  Refresh,
+  Play,
+  Square,
+  RotateCcw,
   Settings,
-} from "@mui/icons-material";
+} from "lucide-react";
 import { useToast } from "@/components/toast-provider";
 
 interface TimerSession {
@@ -300,7 +300,7 @@ export function Timer({
             onClick={() => onSetup?.()}
             sx={{ color: "white", "&:hover": { backgroundColor: "rgba(255, 255, 255, 0.2)" } }}
           >
-            <Settings fontSize="small" />
+            <Settings size={18} />
           </IconButton>
         )}
       </Box>
@@ -385,7 +385,7 @@ export function Timer({
                       {selectedClient.name}
                     </Typography>
                     {!timerState.isRunning && (
-                      <Settings fontSize="small" sx={{ color: "text.secondary", fontSize: "0.875rem" }} />
+                      <Settings size={18} style={{ color: "inherit" }} />
                     )}
                   </Box>
                 </Box>
@@ -434,7 +434,7 @@ export function Timer({
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
-                <Settings fontSize="small" sx={{ color: "text.secondary" }} />
+                <Settings size={18} style={{ color: "inherit" }} />
                 <Typography variant="body2" color="text.secondary">
                   Klik om timer in te stellen
                 </Typography>
@@ -471,7 +471,7 @@ export function Timer({
                 disabled={!timerState.clientId}
                 variant="contained"
                 fullWidth
-                startIcon={<PlayArrow />}
+                startIcon={<Play size={18} />}
                 sx={{
                   background: "linear-gradient(90deg, #9333ea 0%, #ec4899 100%)",
                   "&:hover": {
@@ -486,7 +486,7 @@ export function Timer({
                 onClick={handleStop}
                 variant="contained"
                 fullWidth
-                startIcon={<Stop />}
+                startIcon={<Square size={18} />}
                 sx={{
                   background: "linear-gradient(90deg, #ef4444 0%, #e11d48 100%)",
                   "&:hover": {
@@ -501,7 +501,7 @@ export function Timer({
               <Button
                 onClick={handleReset}
                 variant="outlined"
-                startIcon={<Refresh />}
+                startIcon={<RotateCcw size={18} />}
                 sx={{ borderColor: "divider", "&:hover": { backgroundColor: "action.hover" } }}
               >
                 Reset
