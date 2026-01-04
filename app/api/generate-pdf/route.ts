@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
-import { renderToBuffer } from "@react-pdf/renderer";
+import { renderToBuffer, Document } from "@react-pdf/renderer";
 import { PDFStatement } from "@/components/pdf-statement";
 import React from "react";
 
@@ -65,8 +65,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Render PDF to buffer
-    // @ts-expect-error - PDFStatement returns a Document, but TypeScript doesn't recognize the type correctly
-    const pdfBuffer = await renderToBuffer(pdfDocument);
+    // Type assertion needed because PDFStatement returns a Document, but TypeScript doesn't recognize it
+    const pdfBuffer = await renderToBuffer(
+      pdfDocument as React.ReactElement<React.ComponentProps<typeof Document>>
+    );
 
     // Upload to Supabase Storage
     const supabase = await createClient();
