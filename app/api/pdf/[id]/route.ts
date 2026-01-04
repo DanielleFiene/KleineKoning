@@ -60,7 +60,12 @@ export async function GET(
           const buffer = Buffer.from(arrayBuffer);
           // Check if it's actually a PDF (starts with %PDF)
           if (buffer.toString("utf8", 0, 4) === "%PDF") {
-            return new NextResponse(buffer, {
+            const uint8Array = new Uint8Array(
+              buffer.buffer,
+              buffer.byteOffset,
+              buffer.byteLength
+            );
+            return new NextResponse(uint8Array, {
               headers: {
                 "Content-Type": "application/pdf",
                 "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,
@@ -103,10 +108,19 @@ export async function GET(
     });
 
     // Render PDF to buffer
+    // @ts-expect-error - PDFStatement returns a Document, but TypeScript doesn't recognize the type correctly
     const pdfBuffer = await renderToBuffer(pdfDocument);
 
+    // Convert Buffer to Uint8Array for NextResponse
+    const uint8Array = new Uint8Array(
+      pdfBuffer.buffer,
+      pdfBuffer.byteOffset,
+      pdfBuffer.byteLength
+    );
+
     // Return PDF directly
-    return new NextResponse(pdfBuffer, {
+    // @ts-expect-error - Uint8Array should be valid BodyInit, but TypeScript doesn't recognize it
+    return new NextResponse(uint8Array, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,

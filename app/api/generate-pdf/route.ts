@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Render PDF to buffer
+    // @ts-expect-error - PDFStatement returns a Document, but TypeScript doesn't recognize the type correctly
     const pdfBuffer = await renderToBuffer(pdfDocument);
 
     // Upload to Supabase Storage
