@@ -5,6 +5,22 @@ import { generateStatementPDF } from "@/lib/utils/pdf-generator";
 
 export const runtime = 'edge';
 
+/**
+ * Convert Uint8Array to base64 string in chunks to avoid "Maximum call stack size exceeded" error
+ * for large files (>64KB). This works by processing the bytes in smaller chunks.
+ */
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  const chunkSize = 8192; // Process 8KB at a time
+  let binary = '';
+  
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  
+  return btoa(binary);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -85,8 +101,8 @@ export async function POST(request: NextRequest) {
         // If bucket doesn't exist, return PDF as base64
         if (uploadError.message?.includes("Bucket not found") || uploadError.message?.includes("bucket")) {
           console.warn("Storage bucket 'statements' not found, returning PDF as base64");
-          // Convert Uint8Array to base64
-          const base64 = btoa(String.fromCharCode(...pdfBytes));
+          // Convert Uint8Array to base64 (chunked to handle large files)
+          const base64 = uint8ArrayToBase64(pdfBytes);
           const dataUrl = `data:application/pdf;base64,${base64}`;
           return NextResponse.json({ pdfUrl: dataUrl });
         }
@@ -103,7 +119,7 @@ export async function POST(request: NextRequest) {
       // Fallback to base64 if storage fails
       if (error.message?.includes("Bucket not found") || error.message?.includes("bucket")) {
         console.warn("Storage bucket 'statements' not found, returning PDF as base64");
-        const base64 = btoa(String.fromCharCode(...pdfBytes));
+        const base64 = uint8ArrayToBase64(pdfBytes);
         const dataUrl = `data:application/pdf;base64,${base64}`;
         return NextResponse.json({ pdfUrl: dataUrl });
       }

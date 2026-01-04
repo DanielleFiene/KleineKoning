@@ -183,29 +183,7 @@ export function TimeEntriesView({
     params.set("week", format(currentWeek, "yyyy-MM-dd"));
     if (clientId && clientId !== "all") params.set("client_id", clientId);
     router.push(`/time?${params.toString()}`);
-    
-    // Scroll to first filtered entry after filter change (only if filtering, not "all")
-    if (clientId && clientId !== "all") {
-      setTimeout(() => {
-        const firstFilteredEntry = entries.find((entry) => {
-          if (clientId && clientId !== "all" && entry.client_id !== clientId) return false;
-          return true;
-        });
-        if (firstFilteredEntry) {
-          const element = document.getElementById(`entry-${firstFilteredEntry.id}`);
-          if (element) {
-            // Wait a bit longer for page to render
-            setTimeout(() => {
-              element.scrollIntoView({ behavior: "smooth", block: "nearest" });
-              element.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
-              setTimeout(() => {
-                element.style.backgroundColor = "";
-              }, 2000);
-            }, 300);
-          }
-        }
-      }, 500);
-    }
+    // No scrolling - entries are filtered and hidden automatically via filteredEntries
   };
 
   const handleFilterProjectChange = (projectId: string) => {
@@ -215,30 +193,7 @@ export function TimeEntriesView({
     if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
     if (projectId && projectId !== "all") params.set("project_id", projectId);
     router.push(`/time?${params.toString()}`);
-    
-    // Scroll to first filtered entry after filter change (only if filtering, not "all")
-    if (projectId && projectId !== "all") {
-      setTimeout(() => {
-        const firstFilteredEntry = entries.find((entry) => {
-          if (filterClient && filterClient !== "all" && entry.client_id !== filterClient) return false;
-          if (projectId && projectId !== "all" && entry.project_id !== projectId) return false;
-          return true;
-        });
-        if (firstFilteredEntry) {
-          const element = document.getElementById(`entry-${firstFilteredEntry.id}`);
-          if (element) {
-            // Wait a bit longer for page to render
-            setTimeout(() => {
-              element.scrollIntoView({ behavior: "smooth", block: "nearest" });
-              element.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
-              setTimeout(() => {
-                element.style.backgroundColor = "";
-              }, 2000);
-            }, 300);
-          }
-        }
-      }, 500);
-    }
+    // No scrolling - entries are filtered and hidden automatically via filteredEntries
   };
 
   const handleClientChange = async (clientId: string) => {
@@ -1370,11 +1325,40 @@ export function TimeEntriesView({
           )}
         </Box>
         <Box sx={{ borderTop: "1px solid", borderColor: "divider" }}>
-          {weekDays.map((day) => {
-            const dayStr = format(day, "yyyy-MM-dd");
-            const dayEntries = entriesByDate[dayStr] || [];
-            const dayTotal = dayEntries.reduce((sum, e) => sum + e.duration_minutes, 0);
-            const isToday = dayStr === todayStr;
+          {filteredEntries.length === 0 && (filterClient !== "all" || filterProject !== "all" || searchQuery.trim()) ? (
+            <Box sx={{ p: 4, textAlign: "center" }}>
+              <Typography variant="body1" color="text.secondary" sx={{ mb: 1 }}>
+                Geen entries gevonden met de huidige filters
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Probeer andere filters of wis de filters om alle entries te zien.
+              </Typography>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setFilterClient("all");
+                  setFilterProject("all");
+                  setSearchQuery("");
+                }}
+              >
+                Wis alle filters
+              </Button>
+            </Box>
+          ) : (
+            weekDays
+              .filter((day) => {
+                // If filtering, only show days that have entries matching the filter
+                const dayStr = format(day, "yyyy-MM-dd");
+                const dayEntries = entriesByDate[dayStr] || [];
+                const isFiltering = filterClient !== "all" || filterProject !== "all" || searchQuery.trim();
+                // If filtering, hide days without entries; if not filtering, show all days
+                return !isFiltering || dayEntries.length > 0;
+              })
+              .map((day) => {
+                const dayStr = format(day, "yyyy-MM-dd");
+                const dayEntries = entriesByDate[dayStr] || [];
+                const dayTotal = dayEntries.reduce((sum, e) => sum + e.duration_minutes, 0);
+                const isToday = dayStr === todayStr;
 
             return (
               <Box
@@ -1558,7 +1542,7 @@ export function TimeEntriesView({
                 </Box>
               </Box>
             );
-          })}
+          }))}
         </Box>
       </Paper>
 

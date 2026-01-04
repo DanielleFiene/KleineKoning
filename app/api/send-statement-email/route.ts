@@ -5,6 +5,23 @@ import { nl } from "date-fns/locale";
 
 export const runtime = 'edge';
 
+/**
+ * Convert ArrayBuffer to base64 string in chunks to avoid "Maximum call stack size exceeded" error
+ * for large files (>64KB). This works by processing the bytes in smaller chunks.
+ */
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192; // Process 8KB at a time
+  let binary = '';
+  
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  
+  return btoa(binary);
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -95,6 +112,8 @@ Met vriendelijke groet`;
         // Supabase storage URLs can be:
         // - Public: https://[project].supabase.co/storage/v1/object/public/statements/[user_id]/[statement_id].pdf
         // - Signed: https://[project].supabase.co/storage/v1/object/sign/statements/[user_id]/[statement_id].pdf?token=...
+        // Files are stored as: [user_id]/[statement_id].pdf (without "statements/" prefix)
+        // Note: .from("statements") already specifies the bucket, so fileName should NOT include "statements/"
         let fileName: string;
         
         if (statement.pdf_url.includes('/statements/')) {
@@ -102,13 +121,13 @@ Met vriendelijke groet`;
           if (urlParts.length >= 2) {
             // Remove query parameters if present (for signed URLs)
             const pathPart = urlParts[1].split('?')[0];
-            fileName = `statements/${pathPart}`;
+            fileName = pathPart; // No "statements/" prefix needed - .from("statements") already specifies the bucket
           } else {
             throw new Error("Invalid PDF URL format");
           }
         } else {
-          // Fallback: construct from user ID and statement ID
-          fileName = `statements/${user.id}/${statementId}.pdf`;
+          // Fallback: construct from user ID and statement ID (matches how files are stored in generate-pdf/route.ts)
+          fileName = `${user.id}/${statementId}.pdf`;
         }
         
         // Create signed URL with 7 days expiration (604800 seconds)
@@ -165,7 +184,7 @@ Met vriendelijke groet`;
         const pdfResponse = await fetch(pdfUrl);
         if (pdfResponse.ok) {
           const pdfArrayBuffer = await pdfResponse.arrayBuffer();
-          const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfArrayBuffer)));
+          const pdfBase64 = arrayBufferToBase64(pdfArrayBuffer);
           attachments.push({
             filename: `urenstaat_${statement.statement_number}_${clientName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`,
             content: pdfBase64,

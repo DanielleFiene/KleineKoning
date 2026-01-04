@@ -51,7 +51,8 @@ export async function GET(
     // Supabase storage URLs can be:
     // - Public: https://[project].supabase.co/storage/v1/object/public/statements/[user_id]/[statement_id].pdf
     // - Signed: https://[project].supabase.co/storage/v1/object/sign/statements/[user_id]/[statement_id].pdf?token=...
-    // We need: statements/[user_id]/[statement_id].pdf
+    // Files are stored as: [user_id]/[statement_id].pdf (without "statements/" prefix)
+    // Note: .from("statements") already specifies the bucket, so fileName should NOT include "statements/"
     let fileName: string;
     
     if (statement.pdf_url.includes('/statements/')) {
@@ -61,10 +62,10 @@ export async function GET(
       }
       // Remove query parameters if present (for signed URLs)
       const pathPart = urlParts[1].split('?')[0];
-      fileName = `statements/${pathPart}`;
+      fileName = pathPart; // No "statements/" prefix needed - .from("statements") already specifies the bucket
     } else {
-      // Fallback: construct from user ID and statement ID
-      fileName = `statements/${user.id}/${statementId}.pdf`;
+      // Fallback: construct from user ID and statement ID (matches how files are stored in generate-pdf/route.ts)
+      fileName = `${user.id}/${statementId}.pdf`;
     }
 
     // Create signed URL with 7 days expiration (604800 seconds)

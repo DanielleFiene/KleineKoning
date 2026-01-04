@@ -55,8 +55,15 @@ export async function GET(
               },
             });
           }
+        } else if (response.status === 403 || response.status === 404) {
+          // Signed URL expired or invalid
+          return NextResponse.redirect(new URL("/api/pdf/expired", request.url));
         }
-      } catch (fetchError) {
+      } catch (fetchError: any) {
+        // Check if error is about expired/invalid URL
+        if (fetchError.message?.includes("expired") || fetchError.message?.includes("403") || fetchError.message?.includes("404")) {
+          return NextResponse.redirect(new URL("/api/pdf/expired", request.url));
+        }
         console.warn("Could not fetch PDF from URL, generating new one:", fetchError);
       }
     }
