@@ -1,4 +1,9 @@
-// app/api/statements/route.ts
+/**
+ * app/api/statements/route.ts
+ * 
+ * API route voor het ophalen van alle statements voor de ingelogde gebruiker.
+ * Retourneert JSON array van statements met client informatie. Edge Runtime compatible.
+ */
 import { getStatements } from "@/app/actions/statements";
 import { NextResponse } from "next/server";
 

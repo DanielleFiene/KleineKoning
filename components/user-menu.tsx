@@ -1,4 +1,9 @@
-// components/user-menu.tsx
+/**
+ * components/user-menu.tsx
+ * 
+ * User menu component in de header. Toont gebruikersnaam/email en logout optie.
+ * Gebruikt MUI Menu component voor dropdown functionaliteit.
+ */
 "use client";
 
 import { createClient } from "@/lib/supabase/client";

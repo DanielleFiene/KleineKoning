@@ -1,4 +1,10 @@
-// app/actions/time-entries.ts
+/**
+ * app/actions/time-entries.ts
+ * 
+ * Server actions voor het beheren van tijdentries. Functies voor aanmaken, ophalen,
+ * updaten en verwijderen van tijdentries. Ondersteunt filtering op week, klant, project,
+ * en bulk operaties. Past afrondingsregels toe per project.
+ */
 "use server";
 
 import { createClient } from "@/lib/supabase/server";

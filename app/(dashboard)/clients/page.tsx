@@ -1,4 +1,9 @@
-// app/(dashboard)/clients/page.tsx
+/**
+ * app/(dashboard)/clients/page.tsx
+ * 
+ * Clients dashboard pagina. Toont ClientSearch component met statistieken en
+ * beheer functionaliteit. Server component die data ophaalt en doorgeeft.
+ */
 import { getClientsWithStats } from "@/app/actions/clients";
 import { Container, Box, Typography, Button, Paper, Tooltip } from "@mui/material";
 import { Add, Info } from "@mui/icons-material";

@@ -1,3 +1,9 @@
+/**
+ * app/verwerkersovereenkomst/page.tsx
+ * 
+ * Verwerkersovereenkomst pagina met informatie over data processing agreement tussen
+ * gebruiker (Controller) en Kleine Koning (Processor). Publiek toegankelijk.
+ */
 "use client";
 
 import { Container, Box, Typography, Paper, Link } from "@mui/material";

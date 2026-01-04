@@ -1,4 +1,9 @@
-// app/(dashboard)/projects/page.tsx
+/**
+ * app/(dashboard)/projects/page.tsx
+ * 
+ * Projects dashboard pagina. Toont ProjectSearch component met statistieken en
+ * beheer functionaliteit. Server component die data ophaalt en doorgeeft.
+ */
 import { getProjectsWithStats } from "@/app/actions/projects";
 import { getClients } from "@/app/actions/clients";
 import { Container, Box, Typography, Button, Paper, Tooltip } from "@mui/material";

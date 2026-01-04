@@ -1,3 +1,9 @@
+/**
+ * components/toast-provider.tsx
+ * 
+ * Toast notification provider component. Biedt context voor het tonen van success,
+ * error en warning messages door de hele applicatie. Gebruikt MUI Snackbar.
+ */
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";

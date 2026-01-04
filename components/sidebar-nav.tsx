@@ -1,3 +1,9 @@
+/**
+ * components/sidebar-nav.tsx
+ * 
+ * Sidebar navigatie component met links naar alle dashboard pagina's (Time, Clients,
+ * Projects, Exports). Toont actieve route highlighting en icons.
+ */
 "use client";
 
 import Link from "next/link";

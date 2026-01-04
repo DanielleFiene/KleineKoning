@@ -1,4 +1,9 @@
-// app/api/projects/route.ts
+/**
+ * app/api/projects/route.ts
+ * 
+ * API route voor het ophalen van projecten gefilterd op klant. Retourneert JSON
+ * array van projecten. Edge Runtime compatible.
+ */
 import { getProjectsByClient } from "@/app/actions/projects";
 import { NextResponse } from "next/server";
 

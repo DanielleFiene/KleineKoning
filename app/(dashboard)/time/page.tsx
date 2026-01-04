@@ -1,3 +1,9 @@
+/**
+ * app/(dashboard)/time/page.tsx
+ * 
+ * Time entries dashboard pagina. Toont TimeEntriesView component met weekoverzicht,
+ * filters, en timer functionaliteit. Server component die data ophaalt en doorgeeft.
+ */
 import { getTimeEntries } from "@/app/actions/time-entries";
 import { getClients } from "@/app/actions/clients";
 import { TimeEntriesView } from "@/components/time-entries-view";

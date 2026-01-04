@@ -1,4 +1,10 @@
-// app/actions/projects.ts
+/**
+ * app/actions/projects.ts
+ * 
+ * Server actions voor het beheren van projecten. Functies voor aanmaken, ophalen,
+ * updaten en verwijderen van projecten met tarieven, units en afrondingsregels.
+ * Ondersteunt filtering op klant en automatisch aanmaken van "Algemeen" project.
+ */
 "use server";
 
 import { createClient } from "@/lib/supabase/server";

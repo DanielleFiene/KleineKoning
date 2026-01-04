@@ -1,4 +1,10 @@
-// app/actions/clients.ts
+/**
+ * app/actions/clients.ts
+ * 
+ * Server actions voor het beheren van klanten. Functies voor aanmaken, ophalen,
+ * updaten en verwijderen van klanten met BTW profielen. Controleert authenticatie
+ * en gebruikt Row Level Security voor data separatie.
+ */
 "use server";
 
 import { createClient } from "@/lib/supabase/server";

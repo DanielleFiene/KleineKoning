@@ -1,5 +1,9 @@
-// lib/utils/date.ts
-// Utility functions for consistent date handling across the application
+/**
+ * lib/utils/date.ts
+ * 
+ * Utility functies voor consistente datum handling in de applicatie. Functies voor
+ * parsing, formatting, week berekeningen, en Nederlandse locale support.
+ */
 
 import { format, startOfWeek, parseISO } from "date-fns";
 

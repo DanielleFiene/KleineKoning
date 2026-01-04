@@ -1,3 +1,9 @@
+/**
+ * app/algemene-voorwaarden/page.tsx
+ * 
+ * Algemene Voorwaarden pagina met gebruiksvoorwaarden voor Kleine Koning.
+ * Publiek toegankelijk (niet beschermd door middleware).
+ */
 "use client";
 
 import { Container, Box, Typography, Paper } from "@mui/material";

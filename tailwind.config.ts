@@ -1,4 +1,9 @@
-// tailwind.config.ts
+/**
+ * tailwind.config.ts
+ * 
+ * Tailwind CSS configuratie bestand. Definieert custom colors, fonts, en andere
+ * styling opties. Wordt gebruikt naast MUI voor aanvullende styling.
+ */
 import type { Config } from "tailwindcss";
 
 const config: Config = {

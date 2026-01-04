@@ -1,4 +1,9 @@
-// app/auth/callback/route.ts
+/**
+ * app/auth/callback/route.ts
+ * 
+ * OAuth callback route voor Supabase authenticatie. Wisselt auth codes uit voor
+ * sessies en redirect naar dashboard. Moet publiek toegankelijk zijn.
+ */
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 

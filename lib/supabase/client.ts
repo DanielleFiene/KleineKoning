@@ -1,4 +1,9 @@
-// lib/supabase/client.ts
+/**
+ * lib/supabase/client.ts
+ * 
+ * Supabase browser client voor client-side operaties (Client Components).
+ * Gebruikt localStorage voor authenticatie state.
+ */
 import { createBrowserClient } from "@supabase/ssr";
 
 export function createClient() {

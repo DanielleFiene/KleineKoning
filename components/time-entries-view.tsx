@@ -108,17 +108,7 @@ export function TimeEntriesView({
     end: endOfWeek(currentWeek, { weekStartsOn: 1 }),
   });
   
-  // Debug logging
-  console.log("[TimeEntriesView] DEBUG:", {
-    weekStart,
-    weekStartDate: weekStartDate.toString(),
-    weekStartDateISO: weekStartDate.toISOString(),
-    currentWeek: currentWeek.toString(),
-    currentWeekISO: currentWeek.toISOString(),
-    currentWeekYear: currentWeek.getFullYear(),
-    currentWeekMonth: currentWeek.getMonth() + 1,
-    currentWeekDay: currentWeek.getDate(),
-  });
+  // Initialize week state
 
   // Ensure DatePicker always shows the correct date when weekStart changes
   useEffect(() => {
@@ -360,12 +350,8 @@ export function TimeEntriesView({
   };
 
   const navigateToToday = () => {
-    console.log("[navigateToToday] DEBUG START");
     // Use getCurrentWeekMonday() which uses getTodayDate() - no timezone issues
     const monday = getCurrentWeekMonday();
-    console.log("[navigateToToday] monday object:", monday);
-    console.log("[navigateToToday] monday.toString():", monday.toString());
-    console.log("[navigateToToday] monday.toISOString():", monday.toISOString());
     
     const params = new URLSearchParams();
     // Format using local date components to avoid timezone issues
@@ -374,25 +360,11 @@ export function TimeEntriesView({
     const day = String(monday.getDate()).padStart(2, "0");
     const weekString = `${year}-${month}-${day}`;
     
-    console.log("[navigateToToday] DEBUG:", {
-      monday,
-      year,
-      month,
-      day,
-      weekString,
-      getFullYear: monday.getFullYear(),
-      getMonth: monday.getMonth(),
-      getDate: monday.getDate(),
-      timezoneOffset: monday.getTimezoneOffset(),
-    });
-    
     params.set("week", weekString);
     if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
     if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
     
-    const finalUrl = `/time?${params.toString()}`;
-    console.log("[navigateToToday] Final URL:", finalUrl);
-    router.push(finalUrl);
+    router.push(`/time?${params.toString()}`);
   };
 
   const isCurrentWeek = isSameWeek(currentWeek, getTodayDate(), { weekStartsOn: 1 });
@@ -602,11 +574,8 @@ export function TimeEntriesView({
     sessions?: any[];
     startDate?: string;
   }) => {
-    console.log("[handleTimerStop] Called with:", data);
-    
     // If we have multiple sessions, save each one separately (grouped by client+project)
     if (data.sessions && data.sessions.length > 0) {
-      console.log("[handleTimerStop] Processing multiple sessions:", data.sessions.length);
       // Group sessions by client+project combination
       const sessionGroups = new Map<string, any[]>();
       
@@ -709,20 +678,16 @@ export function TimeEntriesView({
       }
       
       if (savedEntries.length > 0) {
-        console.log(`Timer entries opgeslagen:\n${savedEntries.join("\n")}`);
         toast.showSuccess(`${savedEntries.length} timer entr${savedEntries.length === 1 ? 'y' : 'ies'} opgeslagen`);
         router.refresh();
       } else {
-        console.log("[handleTimerStop] No entries saved from multiple sessions");
         toast.showWarning("Geen entries opgeslagen (mogelijk afgerond naar 0 minuten)");
       }
       return;
     }
     
     // Single session - apply rounding and save automatically
-    console.log("[handleTimerStop] Processing single session");
     if (!data.clientId) {
-      console.log("[handleTimerStop] No client ID, returning");
       toast.showError("Geen klant geselecteerd");
       return;
     }
@@ -784,14 +749,12 @@ export function TimeEntriesView({
       
       // Only save if rounded minutes > 0
       if (roundedMinutes <= 0) {
-        console.log("[handleTimerStop] Rounded minutes is 0, not saving");
         toast.showWarning("Timer entry niet opgeslagen: afgerond naar 0 minuten");
         return;
       }
 
       // Use date from timer start (when timer was started) or fallback to today
       const entryDate = data.startDate || getTodayString();
-      console.log("[handleTimerStop] Saving entry with date:", entryDate, "minutes:", roundedMinutes, "client:", data.clientId, "project:", projectId);
       
       const formData = new FormData();
       formData.set("client_id", data.clientId);
@@ -802,7 +765,6 @@ export function TimeEntriesView({
       formData.set("duration_unit", "minutes");
 
       await createTimeEntry(formData);
-      console.log("[handleTimerStop] Entry saved successfully");
       
       // Show success notification
       const clientName = getClientName(data.clientId);
@@ -910,22 +872,7 @@ export function TimeEntriesView({
                   value={getTodayDate()}
                   onChange={(newDate) => {
                     if (newDate) {
-                      console.log("[DatePicker onChange] DEBUG START:", {
-                        newDate: newDate.toString(),
-                        newDateISO: newDate.toISOString(),
-                        newDateYear: newDate.getFullYear(),
-                        newDateMonth: newDate.getMonth() + 1,
-                        newDateDay: newDate.getDate(),
-                      });
-                      
                       const monday = startOfWeek(newDate, { weekStartsOn: 1 });
-                      console.log("[DatePicker onChange] monday:", {
-                        monday: monday.toString(),
-                        mondayISO: monday.toISOString(),
-                        mondayYear: monday.getFullYear(),
-                        mondayMonth: monday.getMonth() + 1,
-                        mondayDay: monday.getDate(),
-                      });
                       
                       const params = new URLSearchParams();
                       // Format using local date components to avoid timezone issues
@@ -934,20 +881,11 @@ export function TimeEntriesView({
                       const day = String(monday.getDate()).padStart(2, "0");
                       const weekString = `${year}-${month}-${day}`;
                       
-                      console.log("[DatePicker onChange] Final:", {
-                        year,
-                        month,
-                        day,
-                        weekString,
-                      });
-                      
                       params.set("week", weekString);
                       if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
                       if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
                       
-                      const finalUrl = `/time?${params.toString()}`;
-                      console.log("[DatePicker onChange] Final URL:", finalUrl);
-                      router.push(finalUrl);
+                      router.push(`/time?${params.toString()}`);
                     }
                   }}
                   slotProps={{

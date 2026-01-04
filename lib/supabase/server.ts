@@ -1,4 +1,9 @@
-// lib/supabase/server.ts
+/**
+ * lib/supabase/server.ts
+ * 
+ * Supabase server client voor server-side operaties (Server Components, Server Actions).
+ * Gebruikt cookies voor authenticatie state. Edge Runtime compatible.
+ */
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 

@@ -1,3 +1,9 @@
+/**
+ * app/privacy/page.tsx
+ * 
+ * Privacy & AVG pagina met informatie over dataverwerking, gebruikersrechten, en
+ * contactgegevens. Publiek toegankelijk (niet beschermd door middleware).
+ */
 "use client";
 
 import { Container, Box, Typography, Paper, Link } from "@mui/material";
