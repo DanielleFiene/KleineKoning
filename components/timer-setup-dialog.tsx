@@ -60,8 +60,20 @@ export function TimerSetupDialog({
     if (selectedClient) {
       fetch(`/api/projects?client_id=${selectedClient}`)
         .then((res) => res.json())
-        .then((data) => setProjects(data))
-        .catch(() => setProjects([]));
+        .then((data) => {
+          // Check if "Algemeen" project exists, if not add it as an option
+          const hasAlgemeen = data.some((p: any) => p.name === "Algemeen");
+          if (!hasAlgemeen) {
+            // Add "Algemeen" as a virtual option (will be created when needed)
+            setProjects([{ id: "algemeen", name: "Algemeen", client_id: selectedClient }, ...data]);
+          } else {
+            setProjects(data);
+          }
+        })
+        .catch(() => {
+          // Even on error, show "Algemeen" as option
+          setProjects([{ id: "algemeen", name: "Algemeen", client_id: selectedClient }]);
+        });
     } else {
       setProjects([]);
       setSelectedProject("");
@@ -69,21 +81,21 @@ export function TimerSetupDialog({
   }, [selectedClient]);
 
   const handleSave = () => {
-    if (!selectedClient || !selectedProject || !description.trim()) {
-      toast.showWarning("Vul alle velden in");
+    if (!selectedClient || !description.trim()) {
+      toast.showWarning("Vul klant en omschrijving in");
       return;
     }
+    
+    // If no project selected, use "algemeen"
+    const projectId = selectedProject || "algemeen";
 
     onSave({
       clientId: selectedClient,
-      projectId: selectedProject,
+      projectId: projectId,
       description: description.trim(),
     });
 
     // Don't clear fields - keep them for next time so user can quickly start again!
-    // setSelectedClient("");
-    // setSelectedProject("");
-    // setDescription("");
     onOpenChange(false);
   };
 
@@ -118,6 +130,9 @@ export function TimerSetupDialog({
               label="Project"
               onChange={(e) => setSelectedProject(e.target.value)}
             >
+              <MenuItem value="algemeen">
+                Algemeen
+              </MenuItem>
               {projects.map((project) => (
                 <MenuItem key={project.id} value={project.id}>
                   {project.name}

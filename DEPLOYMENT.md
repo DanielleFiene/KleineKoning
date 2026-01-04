@@ -14,11 +14,11 @@
 2. Ga naar **Pages** → **Create a project**
 3. Koppel je GitHub repository
 4. Configureer build settings:
-   - **Framework preset**: Next.js
-   - **Build command**: `npm run build`
-   - **Build output directory**: `.next`
+   - **Framework preset**: Next.js (of None)
+   - **Build command**: `npx @cloudflare/next-on-pages@1`
+   - **Build output directory**: `.vercel/output/static`
    - **Root directory**: `/` (of de root van je project)
-   - **Node.js version**: Cloudflare Pages detecteert automatisch Node.js 20.x via `.nvmrc` of `package.json` engines field
+   - **Node.js version**: Cloudflare Pages detecteert automatisch Node.js 22.x via `.nvmrc` of `package.json` engines field
 
 ### 3. Environment Variables
 

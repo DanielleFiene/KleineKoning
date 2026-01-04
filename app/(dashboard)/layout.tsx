@@ -8,6 +8,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { Box, AppBar, Toolbar, IconButton, useMediaQuery, useTheme } from "@mui/material";
 import { Menu as MenuIcon } from "@mui/icons-material";
 import { ToastProvider } from "@/components/toast-provider";
+import { AppFooter } from "@/components/app-footer";
 import { useState, useEffect } from "react";
 
 function SidebarToggleButton() {
@@ -126,13 +127,18 @@ export default function DashboardLayout({
               component="main"
               sx={{
                 minHeight: "100vh",
+                display: "flex",
+                flexDirection: "column",
                 background:
                   mode === "dark"
                     ? "linear-gradient(135deg, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.8) 50%, rgba(30, 30, 30, 0.8) 100%)"
                     : "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 50%, rgba(147, 51, 234, 0.1) 100%)",
               }}
             >
-              {children}
+              <Box sx={{ flex: 1 }}>
+                {children}
+              </Box>
+              <AppFooter />
             </Box>
           </SidebarInset>
         </SidebarProvider>

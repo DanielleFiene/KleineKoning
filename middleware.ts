@@ -33,11 +33,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect all routes except /login and /auth/callback
+  // Protect all routes except /login, /auth/callback, and legal pages
   // /auth/callback must be accessible without auth to exchange magic link codes
   const isPublicRoute = 
     request.nextUrl.pathname.startsWith("/login") || 
-    request.nextUrl.pathname.startsWith("/auth/callback");
+    request.nextUrl.pathname.startsWith("/auth/callback") ||
+    request.nextUrl.pathname.startsWith("/privacy") ||
+    request.nextUrl.pathname.startsWith("/algemene-voorwaarden") ||
+    request.nextUrl.pathname.startsWith("/verwerkersovereenkomst");
   
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();

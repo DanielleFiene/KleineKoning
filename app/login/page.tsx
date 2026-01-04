@@ -15,6 +15,7 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import Image from "next/image";
+import { AppFooter } from "@/components/app-footer";
 
 function createAppTheme(mode: "light" | "dark") {
   return createTheme({
@@ -90,17 +91,16 @@ export default function LoginPage() {
         sx={{
           minHeight: "100vh",
           display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          p: 3,
+          flexDirection: "column",
           background:
             mode === "dark"
               ? "linear-gradient(135deg, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.8) 50%, rgba(30, 30, 30, 0.8) 100%)"
               : "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 50%, rgba(147, 51, 234, 0.1) 100%)",
         }}
       >
-        <Container maxWidth="sm">
-          <Box sx={{ maxWidth: 420, mx: "auto" }}>
+        <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", p: 3 }}>
+          <Container maxWidth="sm">
+            <Box sx={{ maxWidth: 420, mx: "auto" }}>
             {/* Brand Section */}
             <Box sx={{ mb: 5, textAlign: "center" }}>
               <Box
@@ -218,20 +218,22 @@ export default function LoginPage() {
               </Box>
             </Paper>
 
-            {/* Footer */}
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                mt: 3,
-                display: "block",
-                textAlign: "center",
-              }}
-            >
-              Je ontvangt een beveiligde login link in je email
-            </Typography>
-          </Box>
-        </Container>
+              {/* Footer */}
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{
+                  mt: 3,
+                  display: "block",
+                  textAlign: "center",
+                }}
+              >
+                Je ontvangt een beveiligde login link in je email
+              </Typography>
+            </Box>
+          </Container>
+        </Box>
+        <AppFooter />
       </Box>
     </ThemeProvider>
   );

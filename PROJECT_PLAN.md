@@ -8,7 +8,7 @@
 - Afrondingsregels per project (none/nearest15/up15/down15)
 - Klantenbeheer met BTW-profielen
 - Projectbeheer met tarieven en units
-- Export naar PDF (Urenstaat) per klant/periode
+- Export naar PDF (Urenstaat) per klant/periode (HTML-based, Edge Runtime compatible)
 - Multi-user support met data separatie (RLS)
 - Magic link of GitHub login
 - Week view voor tijdentries
@@ -123,7 +123,7 @@
 
 ### ✅ Fase 1 — Baseline app
 - [x] Next.js + TypeScript + Tailwind setup
-- [x] shadcn/ui geïnstalleerd
+- [x] Material-UI (MUI) geïnstalleerd
 - [x] Sidebar layout
 - [x] Placeholder pages: /login, /time, /clients, /projects, /exports
 
@@ -151,7 +151,7 @@
 - [x] Export selectie UI
 - [x] Preview generatie
 - [x] Statement snapshot
-- [x] PDF generatie (HTML export naar Supabase Storage)
+- [x] PDF generatie (HTML-based, Edge Runtime compatible)
 - [x] Supabase Storage upload
 - [x] Download functionaliteit
 
@@ -176,14 +176,14 @@
 
 ## Tech Stack
 
-- **Framework**: Next.js 14+ (App Router)
+- **Framework**: Next.js 16 (App Router) met Edge Runtime
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui
+- **UI Components**: Material-UI (MUI)
 - **Database**: Supabase (PostgreSQL)
 - **Auth**: Supabase Auth (Magic Link)
 - **Storage**: Supabase Storage (voor PDFs)
-- **PDF**: react-pdf of @react-pdf/renderer
+- **PDF**: HTML-based generatie (Edge Runtime compatible)
 - **Deploy**: Cloudflare Pages
 
 ## Branch Strategy

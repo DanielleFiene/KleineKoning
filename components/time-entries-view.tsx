@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { createTimeEntry, deleteTimeEntry } from "@/app/actions/time-entries";
+import { createProject } from "@/app/actions/projects";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek, isSameWeek } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -183,23 +184,28 @@ export function TimeEntriesView({
     if (clientId && clientId !== "all") params.set("client_id", clientId);
     router.push(`/time?${params.toString()}`);
     
-    // Scroll to first filtered entry after filter change
-    setTimeout(() => {
-      const firstFilteredEntry = entries.find((entry) => {
-        if (clientId && clientId !== "all" && entry.client_id !== clientId) return false;
-        return true;
-      });
-      if (firstFilteredEntry) {
-        const element = document.getElementById(`entry-${firstFilteredEntry.id}`);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
-          element.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
-          setTimeout(() => {
-            element.style.backgroundColor = "";
-          }, 2000);
+    // Scroll to first filtered entry after filter change (only if filtering, not "all")
+    if (clientId && clientId !== "all") {
+      setTimeout(() => {
+        const firstFilteredEntry = entries.find((entry) => {
+          if (clientId && clientId !== "all" && entry.client_id !== clientId) return false;
+          return true;
+        });
+        if (firstFilteredEntry) {
+          const element = document.getElementById(`entry-${firstFilteredEntry.id}`);
+          if (element) {
+            // Wait a bit longer for page to render
+            setTimeout(() => {
+              element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              element.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
+              setTimeout(() => {
+                element.style.backgroundColor = "";
+              }, 2000);
+            }, 300);
+          }
         }
-      }
-    }, 100);
+      }, 500);
+    }
   };
 
   const handleFilterProjectChange = (projectId: string) => {
@@ -210,24 +216,29 @@ export function TimeEntriesView({
     if (projectId && projectId !== "all") params.set("project_id", projectId);
     router.push(`/time?${params.toString()}`);
     
-    // Scroll to first filtered entry after filter change
-    setTimeout(() => {
-      const firstFilteredEntry = entries.find((entry) => {
-        if (filterClient && filterClient !== "all" && entry.client_id !== filterClient) return false;
-        if (projectId && projectId !== "all" && entry.project_id !== projectId) return false;
-        return true;
-      });
-      if (firstFilteredEntry) {
-        const element = document.getElementById(`entry-${firstFilteredEntry.id}`);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
-          element.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
-          setTimeout(() => {
-            element.style.backgroundColor = "";
-          }, 2000);
+    // Scroll to first filtered entry after filter change (only if filtering, not "all")
+    if (projectId && projectId !== "all") {
+      setTimeout(() => {
+        const firstFilteredEntry = entries.find((entry) => {
+          if (filterClient && filterClient !== "all" && entry.client_id !== filterClient) return false;
+          if (projectId && projectId !== "all" && entry.project_id !== projectId) return false;
+          return true;
+        });
+        if (firstFilteredEntry) {
+          const element = document.getElementById(`entry-${firstFilteredEntry.id}`);
+          if (element) {
+            // Wait a bit longer for page to render
+            setTimeout(() => {
+              element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              element.style.backgroundColor = "rgba(99, 102, 241, 0.2)";
+              setTimeout(() => {
+                element.style.backgroundColor = "";
+              }, 2000);
+            }, 300);
+          }
         }
-      }
-    }, 100);
+      }, 500);
+    }
   };
 
   const handleClientChange = async (clientId: string) => {
@@ -627,9 +638,13 @@ export function TimeEntriesView({
     projectId: string;
     description: string;
     sessions?: any[];
+    startDate?: string;
   }) => {
+    console.log("[handleTimerStop] Called with:", data);
+    
     // If we have multiple sessions, save each one separately (grouped by client+project)
     if (data.sessions && data.sessions.length > 0) {
+      console.log("[handleTimerStop] Processing multiple sessions:", data.sessions.length);
       // Group sessions by client+project combination
       const sessionGroups = new Map<string, any[]>();
       
@@ -642,24 +657,79 @@ export function TimeEntriesView({
       });
       
       // Save each group as a separate entry
-      const today = getTodayString();
       const savedEntries: string[] = [];
       
       for (const [key, sessions] of sessionGroups.entries()) {
-        const [clientId, projectId] = key.split("_");
+        const [clientId, projectIdRaw] = key.split("_");
+        // Handle "algemeen" project - need to find or create it
+        let projectId = projectIdRaw === "algemeen" ? null : projectIdRaw;
+        
+        // If "algemeen", find or create the "Algemeen" project for this client
+        if (projectIdRaw === "algemeen" || !projectId) {
+          // Find "Algemeen" project for this client
+          let algemeenProject = allProjects.find(
+            (p) => p.client_id === clientId && p.name === "Algemeen"
+          );
+          
+          if (!algemeenProject) {
+            // Create "Algemeen" project if it doesn't exist
+            try {
+              const createFormData = new FormData();
+              createFormData.set("client_id", clientId);
+              createFormData.set("name", "Algemeen");
+              createFormData.set("default_unit", "minutes");
+              createFormData.set("rounding_rule", "none");
+              
+              await createProject(createFormData);
+              
+              // Refresh projects list
+              const allProjs: any[] = [];
+              for (const client of clients) {
+                try {
+                  const response = await fetch(`/api/projects?client_id=${client.id}`);
+                  const projs = await response.json();
+                  allProjs.push(...projs);
+                } catch (error) {
+                  console.error(`Error loading projects for client ${client.id}:`, error);
+                }
+              }
+              setAllProjects(allProjs);
+              
+              // Find the newly created project
+              algemeenProject = allProjs.find(
+                (p) => p.client_id === clientId && p.name === "Algemeen"
+              );
+            } catch (error) {
+              console.error("Error creating Algemeen project:", error);
+              toast.showError("Fout bij aanmaken 'Algemeen' project: " + (error as Error).message);
+              continue;
+            }
+          }
+          
+          if (algemeenProject) {
+            projectId = algemeenProject.id;
+          } else {
+            toast.showError("Kon 'Algemeen' project niet vinden of aanmaken");
+            continue;
+          }
+        }
+        
         const totalMinutes = sessions.reduce((sum, s) => sum + s.durationMinutes, 0);
         
         // Apply rounding BEFORE checking if > 0
-        const roundingRule = getProjectRoundingRule(projectId);
+        const roundingRule = projectId ? getProjectRoundingRule(projectId) : "none";
         const roundedMinutes = applyRounding(totalMinutes, roundingRule);
         
         // Only save if rounded minutes > 0
         if (roundedMinutes > 0 && clientId && projectId) {
           try {
+            // Use date from session (when timer started) or fallback to today
+            const entryDate = sessions[0]?.date || data.startDate || getTodayString();
+            
             const formData = new FormData();
             formData.set("client_id", clientId);
             formData.set("project_id", projectId);
-            formData.set("date", today);
+            formData.set("date", entryDate);
             formData.set("description", sessions[sessions.length - 1].description); // Use last description
             formData.set("duration_value", roundedMinutes.toString());
             formData.set("duration_unit", "minutes");
@@ -667,51 +737,114 @@ export function TimeEntriesView({
             await createTimeEntry(formData);
             
             const clientName = getClientName(clientId);
-            const projectName = getProjectName(projectId);
+            const projectName = projectIdRaw === "algemeen" ? "Algemeen" : getProjectName(projectId);
             savedEntries.push(`${clientName} - ${projectName}: ${roundedMinutes} min`);
           } catch (error) {
             console.error(`Error saving entry for ${key}:`, error);
+            toast.showError(`Fout bij opslaan: ${(error as Error).message}`);
           }
         }
       }
       
       if (savedEntries.length > 0) {
         console.log(`Timer entries opgeslagen:\n${savedEntries.join("\n")}`);
+        toast.showSuccess(`${savedEntries.length} timer entr${savedEntries.length === 1 ? 'y' : 'ies'} opgeslagen`);
         router.refresh();
+      } else {
+        console.log("[handleTimerStop] No entries saved from multiple sessions");
+        toast.showWarning("Geen entries opgeslagen (mogelijk afgerond naar 0 minuten)");
       }
       return;
     }
     
-    // Single session - apply rounding and save
-    if (!data.clientId || !data.projectId) {
+    // Single session - apply rounding and save automatically
+    console.log("[handleTimerStop] Processing single session");
+    if (!data.clientId) {
+      console.log("[handleTimerStop] No client ID, returning");
+      toast.showError("Geen klant geselecteerd");
       return;
+    }
+
+    // Handle "algemeen" project
+    let projectId = data.projectId;
+    if (projectId === "algemeen" || !projectId) {
+      // Find "Algemeen" project for this client
+      let algemeenProject = allProjects.find(
+        (p) => p.client_id === data.clientId && p.name === "Algemeen"
+      );
+      
+      if (!algemeenProject) {
+        // Create "Algemeen" project if it doesn't exist
+        try {
+          const projectFormData = new FormData();
+          projectFormData.set("client_id", data.clientId);
+          projectFormData.set("name", "Algemeen");
+          projectFormData.set("default_unit", "minutes");
+          projectFormData.set("rounding_rule", "none");
+          
+          await createProject(projectFormData);
+          
+          // Refresh projects list
+          const allProjs: any[] = [];
+          for (const client of clients) {
+            try {
+              const response = await fetch(`/api/projects?client_id=${client.id}`);
+              const projs = await response.json();
+              allProjs.push(...projs);
+            } catch (error) {
+              console.error(`Error loading projects for client ${client.id}:`, error);
+            }
+          }
+          setAllProjects(allProjs);
+          
+          // Find the newly created project
+          algemeenProject = allProjs.find(
+            (p) => p.client_id === data.clientId && p.name === "Algemeen"
+          );
+        } catch (error) {
+          toast.showError("Fout bij aanmaken 'Algemeen' project: " + (error as Error).message);
+          return;
+        }
+      }
+      
+      if (algemeenProject) {
+        projectId = algemeenProject.id;
+      } else {
+        toast.showError("Kon 'Algemeen' project niet vinden of aanmaken");
+        return;
+      }
     }
 
     try {
       // Apply rounding BEFORE checking if > 0
-      const roundingRule = getProjectRoundingRule(data.projectId);
+      const roundingRule = getProjectRoundingRule(projectId);
       const roundedMinutes = applyRounding(data.durationMinutes, roundingRule);
       
       // Only save if rounded minutes > 0
       if (roundedMinutes <= 0) {
-        console.log("Timer entry niet opgeslagen: afgerond naar 0 minuten");
+        console.log("[handleTimerStop] Rounded minutes is 0, not saving");
+        toast.showWarning("Timer entry niet opgeslagen: afgerond naar 0 minuten");
         return;
       }
 
-      const today = getTodayString();
+      // Use date from timer start (when timer was started) or fallback to today
+      const entryDate = data.startDate || getTodayString();
+      console.log("[handleTimerStop] Saving entry with date:", entryDate, "minutes:", roundedMinutes, "client:", data.clientId, "project:", projectId);
+      
       const formData = new FormData();
       formData.set("client_id", data.clientId);
-      formData.set("project_id", data.projectId);
-      formData.set("date", today);
-      formData.set("description", data.description);
+      formData.set("project_id", projectId);
+      formData.set("date", entryDate);
+      formData.set("description", data.description || "");
       formData.set("duration_value", roundedMinutes.toString());
       formData.set("duration_unit", "minutes");
 
       await createTimeEntry(formData);
+      console.log("[handleTimerStop] Entry saved successfully");
       
       // Show success notification
       const clientName = getClientName(data.clientId);
-      const projectName = getProjectName(data.projectId);
+      const projectName = data.projectId === "algemeen" ? "Algemeen" : getProjectName(projectId);
       const formatDuration = (minutes: number) => {
         if (minutes < 60) return `${minutes} min`;
         const hours = Math.floor(minutes / 60);
@@ -719,11 +852,10 @@ export function TimeEntriesView({
         return mins > 0 ? `${hours}u ${mins}min` : `${hours}u`;
       };
       
-      console.log(`Timer entry opgeslagen: ${formatDuration(roundedMinutes)} voor ${clientName} - ${projectName}`);
-      
-      toast.showSuccess(`Timer entry opgeslagen: ${formatDuration(roundedMinutes)}`);
+      toast.showSuccess(`Timer entry opgeslagen: ${formatDuration(roundedMinutes)} voor ${clientName} - ${projectName}`);
       router.refresh();
     } catch (error) {
+      console.error("[handleTimerStop] Error saving entry:", error);
       toast.showError("Fout bij opslaan timer entry: " + (error as Error).message);
     }
   };

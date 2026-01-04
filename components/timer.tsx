@@ -50,6 +50,7 @@ export function Timer({
     projectId: string;
     description: string;
     sessions?: TimerSession[];
+    startDate?: string;
   }) => void;
   onSetup?: () => void;
   clients: Array<{ id: string; name: string }>;
@@ -121,12 +122,14 @@ export function Timer({
   }, [timerState.isRunning]);
 
   const handleStart = () => {
-    if (!timerState.clientId || !timerState.projectId) {
+    if (!timerState.clientId) {
+      toast.showWarning("Selecteer eerst een klant");
       if (onSetup) {
         onSetup();
       }
       return;
     }
+    // Project is optioneel - "Algemeen" is altijd beschikbaar
     setTimerState((prev) => ({
       ...prev,
       isRunning: true,
@@ -167,21 +170,40 @@ export function Timer({
   const handleStop = () => {
     if (!timerState.isRunning) return;
     
+    if (!timerState.clientId) {
+      toast.showWarning("Geen klant geselecteerd");
+      return;
+    }
+    
     // Calculate current session time
     const currentElapsed = timerState.startTime 
       ? Math.floor((Date.now() - timerState.startTime) / 1000)
       : 0;
     const currentMinutes = Math.floor((timerState.elapsedSeconds + currentElapsed) / 60);
     
+    // Get the date when timer started (use startTime to determine correct date)
+    const startDate = timerState.startTime 
+      ? new Date(timerState.startTime)
+      : new Date();
+    
+    // Format date as YYYY-MM-DD (local date, not UTC)
+    const year = startDate.getFullYear();
+    const month = String(startDate.getMonth() + 1).padStart(2, "0");
+    const day = String(startDate.getDate()).padStart(2, "0");
+    const entryDate = `${year}-${month}-${day}`;
+    
     // Combine all sessions including current one
     const allSessions = [...(timerState.sessions || [])];
-    if (currentMinutes > 0 && timerState.clientId && timerState.projectId) {
+    
+    // Always add current session if timer was running (even if 0 minutes, for rounding)
+    if (timerState.clientId) {
       allSessions.push({
-        durationMinutes: currentMinutes,
+        durationMinutes: currentMinutes, // Can be 0, will be rounded
         clientId: timerState.clientId,
-        projectId: timerState.projectId,
+        projectId: timerState.projectId || "algemeen",
         description: timerState.description,
-        timestamp: Date.now(),
+        timestamp: timerState.startTime || Date.now(),
+        date: entryDate, // Add date to session
       });
     }
     
@@ -194,19 +216,29 @@ export function Timer({
       sessions: [], // Clear accumulated sessions after saving
     }));
 
-    // Pass all sessions to onStop (will be handled in stop dialog)
-    if (allSessions.length > 0) {
+    // Always call onStop if we have a client (even if 0 minutes, rounding might make it > 0)
+    if (timerState.clientId && allSessions.length > 0) {
       // For now, combine all sessions into one entry
-      // The stop dialog will handle showing options
       const totalMinutes = allSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
       const lastSession = allSessions[allSessions.length - 1];
       
       onStop({
         durationMinutes: totalMinutes,
         clientId: lastSession.clientId,
-        projectId: lastSession.projectId,
+        projectId: lastSession.projectId || "algemeen",
         description: lastSession.description,
-        sessions: allSessions, // Pass all sessions for later use
+        sessions: allSessions, // Pass all sessions with dates
+        startDate: entryDate, // Pass the date when timer started
+      });
+    } else if (timerState.clientId) {
+      // Fallback: if no sessions but we have a client, still try to save
+      onStop({
+        durationMinutes: currentMinutes,
+        clientId: timerState.clientId,
+        projectId: timerState.projectId || "algemeen",
+        description: timerState.description,
+        sessions: [],
+        startDate: entryDate,
       });
     }
   };
@@ -319,12 +351,21 @@ export function Timer({
           {selectedClient && selectedProject && (
             <Paper
               elevation={0}
+              onClick={() => !timerState.isRunning && onSetup?.()}
               sx={{
                 p: 2,
                 background: "linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%)",
                 border: "1px solid",
                 borderColor: "secondary.light",
                 borderRadius: 2,
+                cursor: timerState.isRunning ? "default" : "pointer",
+                transition: "all 0.2s",
+                "&:hover": timerState.isRunning ? {} : {
+                  borderColor: "secondary.main",
+                  background: "linear-gradient(135deg, rgba(147, 51, 234, 0.15) 0%, rgba(236, 72, 153, 0.15) 100%)",
+                  transform: "translateY(-1px)",
+                  boxShadow: 1,
+                },
               }}
             >
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
@@ -332,9 +373,14 @@ export function Timer({
                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
                     Klant:
                   </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: "bold", color: "secondary.main" }}>
-                    {selectedClient.name}
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "secondary.main" }}>
+                      {selectedClient.name}
+                    </Typography>
+                    {!timerState.isRunning && (
+                      <Settings fontSize="small" sx={{ color: "text.secondary", fontSize: "0.875rem" }} />
+                    )}
+                  </Box>
                 </Box>
                 <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
@@ -360,8 +406,36 @@ export function Timer({
               </Box>
             </Paper>
           )}
+          
+          {/* Show clickable area even if no client/project selected yet */}
+          {!selectedClient && !timerState.isRunning && (
+            <Paper
+              elevation={0}
+              onClick={() => onSetup?.()}
+              sx={{
+                p: 2,
+                background: "linear-gradient(135deg, rgba(147, 51, 234, 0.05) 0%, rgba(236, 72, 153, 0.05) 100%)",
+                border: "1px dashed",
+                borderColor: "divider",
+                borderRadius: 2,
+                cursor: "pointer",
+                transition: "all 0.2s",
+                "&:hover": {
+                  borderColor: "secondary.main",
+                  background: "linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%)",
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1 }}>
+                <Settings fontSize="small" sx={{ color: "text.secondary" }} />
+                <Typography variant="body2" color="text.secondary">
+                  Klik om timer in te stellen
+                </Typography>
+              </Box>
+            </Paper>
+          )}
 
-          {(!timerState.clientId || !timerState.projectId) && !timerState.isRunning && (
+          {!timerState.clientId && !timerState.isRunning && (
             <Button
               onClick={() => onSetup?.()}
               variant="outlined"
@@ -387,7 +461,7 @@ export function Timer({
             {!timerState.isRunning ? (
               <Button
                 onClick={handleStart}
-                disabled={!timerState.clientId || !timerState.projectId}
+                disabled={!timerState.clientId}
                 variant="contained"
                 fullWidth
                 startIcon={<PlayArrow />}
