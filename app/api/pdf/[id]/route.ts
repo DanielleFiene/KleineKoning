@@ -4,9 +4,17 @@ import { getStatement } from "@/app/actions/statements";
 import { format } from "date-fns";
 import { nl } from "date-fns/locale";
 import { parseDateString } from "@/lib/utils/date";
-import { renderToBuffer } from "@react-pdf/renderer";
+import { renderToBuffer, Document } from "@react-pdf/renderer";
 import { PDFStatement } from "@/components/pdf-statement";
 import React from "react";
+
+// Helper function to safely render PDF with type assertion
+// This is needed because PDFStatement returns a Document, but TypeScript doesn't recognize it
+async function renderPDFToBuffer(element: React.ReactElement): Promise<Buffer> {
+  // @ts-ignore - PDFStatement returns a Document, but TypeScript doesn't recognize it
+  // This is a known limitation of @react-pdf/renderer types
+  return await renderToBuffer(element);
+}
 
 // Helper function to format date string (YYYY-MM-DD) to readable format
 function formatDate(dateStr: string): string {
@@ -108,8 +116,7 @@ export async function GET(
     });
 
     // Render PDF to buffer
-    // @ts-expect-error - PDFStatement returns a Document, but TypeScript doesn't recognize the type correctly
-    const pdfBuffer = await renderToBuffer(pdfDocument);
+    const pdfBuffer = await renderPDFToBuffer(pdfDocument);
 
     // Convert Buffer to Uint8Array for NextResponse
     const uint8Array = new Uint8Array(

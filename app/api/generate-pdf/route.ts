@@ -7,6 +7,14 @@ import { renderToBuffer, Document } from "@react-pdf/renderer";
 import { PDFStatement } from "@/components/pdf-statement";
 import React from "react";
 
+// Helper function to safely render PDF with type assertion
+// This is needed because PDFStatement returns a Document, but TypeScript doesn't recognize it
+async function renderPDFToBuffer(element: React.ReactElement): Promise<Buffer> {
+  // @ts-ignore - PDFStatement returns a Document, but TypeScript doesn't recognize it
+  // This is a known limitation of @react-pdf/renderer types
+  return await renderToBuffer(element);
+}
+
 // Helper function to format date string (YYYY-MM-DD) to readable format
 function formatDate(dateStr: string): string {
   try {
@@ -65,10 +73,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Render PDF to buffer
-    // Type assertion needed because PDFStatement returns a Document, but TypeScript doesn't recognize it
-    const pdfBuffer = await renderToBuffer(
-      pdfDocument as React.ReactElement<React.ComponentProps<typeof Document>>
-    );
+    const pdfBuffer = await renderPDFToBuffer(pdfDocument);
 
     // Upload to Supabase Storage
     const supabase = await createClient();
