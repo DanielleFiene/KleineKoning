@@ -1,9 +1,3 @@
-/**
- * components/sidebar-nav.tsx
- * 
- * Sidebar navigatie component met links naar alle dashboard pagina's (Time, Clients,
- * Projects, Exports). Toont actieve route highlighting en icons.
- */
 "use client";
 
 import Link from "next/link";
@@ -21,7 +15,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Box, Typography, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
-import { Clock, DownloadCloud, Users, FileText } from "lucide-react";
+import { Clock, Download, Users, Briefcase } from "lucide-react";
 
 const menuItems = [
   {
@@ -32,7 +26,7 @@ const menuItems = [
   {
     title: "Export",
     url: "/exports",
-    icon: DownloadCloud,
+    icon: Download,
   },
   {
     title: "Klanten",
@@ -42,7 +36,7 @@ const menuItems = [
   {
     title: "Projecten",
     url: "/projects",
-    icon: FileText,
+    icon: Briefcase,
   },
 ];
 
@@ -116,7 +110,7 @@ export function SidebarNav() {
                         }}
                       >
                         <ListItemIcon sx={{ color: isActive ? "white" : "inherit", minWidth: 40 }}>
-                          <item.icon fontSize="small" />
+                          <item.icon size={20} />
                         </ListItemIcon>
                         <ListItemText primary={item.title} />
                       </ListItemButton>
