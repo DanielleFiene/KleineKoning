@@ -7,7 +7,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getStatement } from "@/app/actions/statements";
+import { getStatement, updateStatementPdfUrl } from "@/app/actions/statements";
 
 export const runtime = 'edge';
 export async function GET(
@@ -42,11 +42,60 @@ export async function GET(
       return NextResponse.json({ error: "Not authorized" }, { status: 403 });
     }
 
-    // Check if PDF exists in storage
-    if (!statement.pdf_url || statement.pdf_url.startsWith("data:")) {
+    // Check if PDF exists
+    if (!statement.pdf_url) {
       return NextResponse.json({ 
-        error: "PDF not available in storage. Please generate the PDF first." 
+        error: "PDF not available. Please generate the PDF first." 
       }, { status: 404 });
+    }
+
+    // If PDF is stored as base64 data URL, upload it to storage first
+    if (statement.pdf_url.startsWith("data:")) {
+      try {
+        // Extract base64 data
+        const base64Data = statement.pdf_url.split(',')[1];
+        if (!base64Data) {
+          throw new Error("Invalid base64 data URL");
+        }
+
+        // Convert base64 to Uint8Array
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+
+        // Upload to storage
+        const fileName = `${user.id}/${statementId}.pdf`;
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        
+        const { error: uploadError } = await supabase.storage
+          .from("statements")
+          .upload(fileName, blob, {
+            contentType: "application/pdf",
+            upsert: true,
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // Get public URL and update statement
+        const { data: { publicUrl } } = supabase.storage
+          .from("statements")
+          .getPublicUrl(fileName);
+
+        // Update statement with new URL using server action
+        await updateStatementPdfUrl(statementId, publicUrl);
+
+        // Now continue with signed URL generation using the new URL
+        statement.pdf_url = publicUrl;
+      } catch (error) {
+        console.error("Error uploading base64 PDF to storage:", error);
+        return NextResponse.json({ 
+          error: "Could not upload PDF to storage. Please regenerate the PDF." 
+        }, { status: 500 });
+      }
     }
 
     // Extract file path from storage URL
