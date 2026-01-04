@@ -1,29 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStatement } from "@/app/actions/statements";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
-import { parseDateString } from "@/lib/utils/date";
-import { renderToBuffer, Document } from "@react-pdf/renderer";
-import { PDFStatement } from "@/components/pdf-statement";
-import React from "react";
+import { generateStatementHTML } from "@/lib/utils/pdf-html";
 
-// Helper function to safely render PDF with type assertion
-// This is needed because PDFStatement returns a Document, but TypeScript doesn't recognize it
-async function renderPDFToBuffer(element: React.ReactElement): Promise<Buffer> {
-  // Use explicit type casting that works in all build environments
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return await renderToBuffer(element as any);
-}
+export const runtime = 'edge';
 
-// Helper function to format date string (YYYY-MM-DD) to readable format
-function formatDate(dateStr: string): string {
-  try {
-    const date = parseDateString(dateStr);
-    return format(date, "d MMMM yyyy", { locale: nl });
-  } catch {
-    return dateStr;
+// Convert HTML to PDF using Edge-compatible service
+async function htmlToPdf(html: string): Promise<Uint8Array> {
+  // Use a PDF generation service that works with Edge Runtime
+  const pdfServiceUrl = process.env.PDF_SERVICE_URL || 'https://api.pdfshift.io/v3/convert/pdf';
+  const pdfServiceKey = process.env.PDF_SERVICE_API_KEY;
+  
+  if (pdfServiceKey && pdfServiceUrl) {
+    try {
+      const response = await fetch(pdfServiceUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa(`api:${pdfServiceKey}`)}`,
+        },
+        body: JSON.stringify({
+          source: html,
+          format: 'pdf',
+        }),
+      });
+      
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        return new Uint8Array(arrayBuffer);
+      }
+    } catch (error) {
+      console.warn('PDF service failed, falling back to HTML:', error);
+    }
   }
+  
+  // Fallback: Return HTML for client-side conversion
+  // This allows the app to work without a PDF service configured
+  console.warn('PDF service not configured, returning HTML for client-side conversion');
+  const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
+  const dataUrl = `data:text/html;base64,${htmlBase64}`;
+  
+  // Return HTML instead of PDF when service is not configured
+  throw new Error('PDF_SERVICE_NOT_CONFIGURED:' + dataUrl);
 }
 
 export async function GET(
@@ -65,14 +83,10 @@ export async function GET(
         const response = await fetch(statement.pdf_url);
         if (response.ok) {
           const arrayBuffer = await response.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
+          const uint8Array = new Uint8Array(arrayBuffer);
           // Check if it's actually a PDF (starts with %PDF)
-          if (buffer.toString("utf8", 0, 4) === "%PDF") {
-            const uint8Array = new Uint8Array(
-              buffer.buffer,
-              buffer.byteOffset,
-              buffer.byteLength
-            );
+          const header = String.fromCharCode(...uint8Array.slice(0, 4));
+          if (header === "%PDF") {
             return new NextResponse(uint8Array, {
               headers: {
                 "Content-Type": "application/pdf",
@@ -97,7 +111,7 @@ export async function GET(
       0
     );
 
-    // Prepare entries for PDF component
+    // Prepare entries for PDF
     const pdfEntries = statement.statement_lines.map((line: any) => ({
       date: line.date,
       project_name: line.project_name || "-",
@@ -105,29 +119,51 @@ export async function GET(
       duration_minutes: line.duration_minutes,
     }));
 
-    // Generate real PDF using @react-pdf/renderer
-    const pdfDocument = React.createElement(PDFStatement, {
-      clientName: statement.clients?.name || "Onbekend",
-      statementNumber: statement.statement_number,
-      periodStart: statement.period_start,
-      periodEnd: statement.period_end,
-      entries: pdfEntries,
-      totalMinutes,
-    });
-
-    // Render PDF to buffer
-    const pdfBuffer = await renderPDFToBuffer(pdfDocument);
-
-    // Convert Buffer to Uint8Array for NextResponse
-    const uint8Array = new Uint8Array(
-      pdfBuffer.buffer,
-      pdfBuffer.byteOffset,
-      pdfBuffer.byteLength
+    // Generate HTML for PDF
+    const html = generateStatementHTML(
+      statement.clients?.name || "Onbekend",
+      statement.statement_number,
+      statement.period_start,
+      statement.period_end,
+      pdfEntries,
+      totalMinutes
     );
 
+    // Convert HTML to PDF (Edge Runtime compatible)
+    let pdfBytes: Uint8Array;
+    
+    try {
+      pdfBytes = await htmlToPdf(html);
+    } catch (error: any) {
+      // If PDF service is not configured, return HTML
+      if (error.message?.startsWith('PDF_SERVICE_NOT_CONFIGURED:')) {
+        const htmlDataUrl = error.message.replace('PDF_SERVICE_NOT_CONFIGURED:', '');
+        // Decode base64 HTML (Edge Runtime compatible)
+        const base64Content = htmlDataUrl.replace('data:text/html;base64,', '');
+        // Use TextDecoder for Edge Runtime compatibility
+        const binaryString = atob(base64Content);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const htmlContent = new TextDecoder('utf-8').decode(bytes);
+        return new NextResponse(htmlContent, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.html"`,
+          },
+        });
+      }
+      throw error;
+    }
+
+    // Convert to ArrayBuffer for NextResponse
+    const arrayBuffer = pdfBytes.buffer instanceof ArrayBuffer
+      ? pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength)
+      : new Uint8Array(pdfBytes).buffer;
+
     // Return PDF directly
-    // @ts-expect-error - Uint8Array should be valid BodyInit, but TypeScript doesn't recognize it
-    return new NextResponse(uint8Array, {
+    return new NextResponse(arrayBuffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,

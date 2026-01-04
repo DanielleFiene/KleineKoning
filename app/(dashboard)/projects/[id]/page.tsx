@@ -10,6 +10,8 @@ import {
 import { Edit } from "@mui/icons-material";
 import Link from "next/link";
 
+export const runtime = 'edge';
+
 export default async function ProjectDetailPage({
   params,
 }: {

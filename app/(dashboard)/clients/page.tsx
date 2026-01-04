@@ -5,6 +5,8 @@ import { Add, Info } from "@mui/icons-material";
 import Link from "next/link";
 import { ClientSearch } from "@/components/client-search";
 
+export const runtime = 'edge';
+
 export default async function ClientsPage() {
   const clients = await getClientsWithStats();
 

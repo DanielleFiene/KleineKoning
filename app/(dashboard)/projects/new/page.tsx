@@ -3,6 +3,8 @@ import { getClients } from "@/app/actions/clients";
 import { Container, Box, Typography } from "@mui/material";
 import { ProjectForm } from "@/components/project-form";
 
+export const runtime = 'edge';
+
 export default async function NewProjectPage({
   searchParams,
 }: {

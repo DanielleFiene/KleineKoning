@@ -2,6 +2,8 @@
 import { getProjectsByClient } from "@/app/actions/projects";
 import { NextResponse } from "next/server";
 
+export const runtime = 'edge';
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get("client_id");

@@ -1,29 +1,58 @@
 // app/api/generate-pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { format } from "date-fns";
-import { nl } from "date-fns/locale";
-import { renderToBuffer, Document } from "@react-pdf/renderer";
-import { PDFStatement } from "@/components/pdf-statement";
-import React from "react";
+import { generateStatementHTML } from "@/lib/utils/pdf-html";
 
-// Helper function to safely render PDF with type assertion
-// This is needed because PDFStatement returns a Document, but TypeScript doesn't recognize it
-async function renderPDFToBuffer(element: React.ReactElement): Promise<Buffer> {
-  // Use explicit type casting that works in all build environments
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return await renderToBuffer(element as any);
-}
+export const runtime = 'edge';
 
-// Helper function to format date string (YYYY-MM-DD) to readable format
-function formatDate(dateStr: string): string {
-  try {
-    const [year, month, day] = dateStr.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
-    return format(date, "d MMMM yyyy", { locale: nl });
-  } catch {
-    return dateStr;
+// Convert HTML to PDF using Edge-compatible service
+async function htmlToPdf(html: string): Promise<Uint8Array> {
+  // Use a PDF generation service that works with Edge Runtime
+  // Options:
+  // 1. PDFShift (https://pdfshift.io) - Free tier available
+  // 2. PDF.co (https://pdf.co) - Free tier available
+  // 3. Cloudflare Browser Rendering API (if available)
+  
+  const pdfServiceUrl = process.env.PDF_SERVICE_URL;
+  const pdfServiceKey = process.env.PDF_SERVICE_API_KEY;
+  
+  // Try PDFShift API (most Edge-compatible)
+  if (pdfServiceKey && pdfServiceUrl) {
+    try {
+      const response = await fetch(pdfServiceUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${btoa(`api:${pdfServiceKey}`)}`,
+        },
+        body: JSON.stringify({
+          source: html,
+          format: 'pdf',
+        }),
+      });
+      
+      if (response.ok) {
+        const arrayBuffer = await response.arrayBuffer();
+        return new Uint8Array(arrayBuffer);
+      } else {
+        const errorText = await response.text();
+        console.error('PDF service error:', errorText);
+      }
+    } catch (error) {
+      console.warn('PDF service failed:', error);
+    }
   }
+  
+  // Fallback: Return HTML as data URL (client can print to PDF)
+  // This allows the app to work without a PDF service configured
+  // The client can use window.print() or a client-side PDF library
+  console.warn('PDF service not configured, returning HTML for client-side conversion');
+  const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
+  const dataUrl = `data:text/html;base64,${htmlBase64}`;
+  
+  // Return a minimal PDF-like response that the client can handle
+  // In practice, the client should convert HTML to PDF using window.print() or jsPDF
+  throw new Error('PDF_SERVICE_NOT_CONFIGURED:' + dataUrl);
 }
 
 export async function POST(request: NextRequest) {
@@ -54,7 +83,7 @@ export async function POST(request: NextRequest) {
       0
     );
 
-    // Prepare entries for PDF component
+    // Prepare entries for PDF
     const pdfEntries = entries.map((entry: any) => ({
       date: entry.date,
       project_name: entry.projects?.name || "-",
@@ -62,18 +91,34 @@ export async function POST(request: NextRequest) {
       duration_minutes: entry.duration_minutes,
     }));
 
-    // Generate real PDF using @react-pdf/renderer
-    const pdfDocument = React.createElement(PDFStatement, {
+    // Generate HTML for PDF
+    const html = generateStatementHTML(
       clientName,
       statementNumber,
       periodStart,
       periodEnd,
-      entries: pdfEntries,
-      totalMinutes,
-    });
+      pdfEntries,
+      totalMinutes
+    );
 
-    // Render PDF to buffer
-    const pdfBuffer = await renderPDFToBuffer(pdfDocument);
+    // Convert HTML to PDF (Edge Runtime compatible)
+    let pdfBytes: Uint8Array;
+    let isHtmlFallback = false;
+    
+    try {
+      pdfBytes = await htmlToPdf(html);
+    } catch (error: any) {
+      // If PDF service is not configured, return HTML as data URL
+      if (error.message?.startsWith('PDF_SERVICE_NOT_CONFIGURED:')) {
+        const htmlDataUrl = error.message.replace('PDF_SERVICE_NOT_CONFIGURED:', '');
+        return NextResponse.json({ 
+          pdfUrl: htmlDataUrl,
+          isHtml: true,
+          message: 'PDF service niet geconfigureerd. HTML wordt teruggegeven voor client-side conversie.'
+        });
+      }
+      throw error;
+    }
 
     // Upload to Supabase Storage
     const supabase = await createClient();
@@ -91,9 +136,16 @@ export async function POST(request: NextRequest) {
     try {
       // Path must include user ID folder to match storage policy: auth.uid()::text = (storage.foldername(name))[1]
       const fileName = `${user.id}/${statementId}.pdf`;
+      
+      // Convert Uint8Array to Blob for Supabase upload
+      const arrayBuffer = pdfBytes.buffer instanceof ArrayBuffer
+        ? pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength)
+        : new Uint8Array(pdfBytes).buffer;
+      const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("statements")
-        .upload(fileName, pdfBuffer, {
+        .upload(fileName, blob, {
           contentType: "application/pdf",
           upsert: true,
         });
@@ -102,7 +154,8 @@ export async function POST(request: NextRequest) {
         // If bucket doesn't exist, return PDF as base64
         if (uploadError.message?.includes("Bucket not found") || uploadError.message?.includes("bucket")) {
           console.warn("Storage bucket 'statements' not found, returning PDF as base64");
-          const base64 = pdfBuffer.toString("base64");
+          // Convert Uint8Array to base64
+          const base64 = btoa(String.fromCharCode(...pdfBytes));
           const dataUrl = `data:application/pdf;base64,${base64}`;
           return NextResponse.json({ pdfUrl: dataUrl });
         }
@@ -119,7 +172,7 @@ export async function POST(request: NextRequest) {
       // Fallback to base64 if storage fails
       if (error.message?.includes("Bucket not found") || error.message?.includes("bucket")) {
         console.warn("Storage bucket 'statements' not found, returning PDF as base64");
-        const base64 = pdfBuffer.toString("base64");
+        const base64 = btoa(String.fromCharCode(...pdfBytes));
         const dataUrl = `data:application/pdf;base64,${base64}`;
         return NextResponse.json({ pdfUrl: dataUrl });
       }

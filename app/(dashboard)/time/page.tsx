@@ -4,6 +4,8 @@ import { TimeEntriesView } from "@/components/time-entries-view";
 import { startOfWeek, endOfWeek, format } from "date-fns";
 import { getCurrentWeekMonday, parseDateString } from "@/lib/utils/date";
 
+export const runtime = 'edge';
+
 export default async function TimePage({
   searchParams,
 }: {

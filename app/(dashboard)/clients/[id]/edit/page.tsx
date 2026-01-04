@@ -3,6 +3,8 @@ import { getClient } from "@/app/actions/clients";
 import { Container, Box, Typography } from "@mui/material";
 import { ClientForm } from "@/components/client-form";
 
+export const runtime = 'edge';
+
 export default async function EditClientPage({
   params,
 }: {

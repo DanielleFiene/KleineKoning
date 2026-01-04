@@ -156,14 +156,37 @@ export function ExportsView({
         }),
       });
 
-      const { pdfUrl } = await response.json();
-      await updateStatementPdfUrl(statement.id, pdfUrl);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "PDF generatie mislukt");
+      }
 
-      const statementsResponse = await fetch("/api/statements");
-      const newStatements = await statementsResponse.json();
-      setStatements(newStatements);
-
-      alert("PDF gegenereerd! Je kunt het nu downloaden.");
+      const result = await response.json();
+      const { pdfUrl, isHtml } = result;
+      
+      if (isHtml) {
+        // PDF service not configured - open HTML in new window for printing
+        const base64Content = pdfUrl.replace('data:text/html;base64,', '');
+        const binaryString = atob(base64Content);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        const htmlContent = new TextDecoder('utf-8').decode(bytes);
+        
+        const newWindow = window.open();
+        if (newWindow) {
+          newWindow.document.write(htmlContent);
+          newWindow.document.close();
+          alert("PDF service niet geconfigureerd. HTML wordt geopend - gebruik Ctrl+P (of Cmd+P) om te printen naar PDF.");
+        }
+      } else {
+        await updateStatementPdfUrl(statement.id, pdfUrl);
+        const statementsResponse = await fetch("/api/statements");
+        const newStatements = await statementsResponse.json();
+        setStatements(newStatements);
+        alert("PDF gegenereerd! Je kunt het nu downloaden.");
+      }
     } catch (error) {
       alert("Fout bij genereren PDF: " + (error as Error).message);
     } finally {

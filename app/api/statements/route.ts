@@ -2,6 +2,8 @@
 import { getStatements } from "@/app/actions/statements";
 import { NextResponse } from "next/server";
 
+export const runtime = 'edge';
+
 export async function GET() {
   try {
     const statements = await getStatements();

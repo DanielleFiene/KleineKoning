@@ -6,6 +6,8 @@ import { Add, Info } from "@mui/icons-material";
 import Link from "next/link";
 import { ProjectSearch } from "@/components/project-search";
 
+export const runtime = 'edge';
+
 export default async function ProjectsPage() {
   const projects = await getProjectsWithStats();
   const clients = await getClients();
