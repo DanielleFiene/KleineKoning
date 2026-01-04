@@ -8,8 +8,6 @@
 "use client";
 
 import { useState } from "react";
-import { getTimeEntries } from "@/app/actions/time-entries";
-import { createStatement, updateStatementPdfUrl } from "@/app/actions/statements";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, parseISO } from "date-fns";
 import { nl } from "date-fns/locale";
 import { getTodayDate, parseDateString } from "@/lib/utils/date";
@@ -45,7 +43,6 @@ import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useToast } from "@/components/toast-provider";
-import { deleteStatement } from "@/app/actions/statements";
 
 interface Client {
   id: string;
@@ -128,11 +125,22 @@ export function ExportsView({
     const period = calculatePeriod();
 
     try {
-      const entries = await getTimeEntries({
-        clientId: selectedClient,
-        startDate: period.start,
-        endDate: period.end,
+      const res = await fetch("/api/time-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: selectedClient,
+          startDate: period.start,
+          endDate: period.end,
+        }),
       });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Ophalen time entries mislukt");
+      }
+
+      const { entries } = await res.json();
 
       const client = clients.find((c) => c.id === selectedClient);
       setPreviewData({
@@ -152,12 +160,23 @@ export function ExportsView({
 
     setGenerating(true);
     try {
-      const { statement, client } = await createStatement(
-        selectedClient,
-        previewData.period.start,
-        previewData.period.end,
-        previewData.entries
-      );
+      const createRes = await fetch("/api/statements", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: selectedClient,
+          periodStart: previewData.period.start,
+          periodEnd: previewData.period.end,
+          entries: previewData.entries,
+        }),
+      });
+
+      if (!createRes.ok) {
+        const err = await createRes.json().catch(() => ({}));
+        throw new Error(err.error || "Statement aanmaken mislukt");
+      }
+
+      const { statement, client } = await createRes.json();
 
       if (!client) {
         toast.showError("Fout: Klant niet gevonden");
@@ -187,7 +206,16 @@ export function ExportsView({
       const { pdfUrl } = result;
       
       // PDF is always generated now (using pdf-lib, no HTML fallback)
-      await updateStatementPdfUrl(statement.id, pdfUrl);
+      const updateRes = await fetch(`/api/statements/${statement.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pdfUrl }),
+      });
+
+      if (!updateRes.ok) {
+        const err = await updateRes.json().catch(() => ({}));
+        console.error("Fout bij updaten PDF URL:", err.error);
+      }
       
       // Refresh statements list
       const statementsResponse = await fetch("/api/statements");
@@ -232,7 +260,15 @@ export function ExportsView({
 
   const handleDelete = async (id: string) => {
     try {
-      await deleteStatement(id);
+      const deleteRes = await fetch(`/api/statements/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!deleteRes.ok) {
+        const err = await deleteRes.json().catch(() => ({}));
+        throw new Error(err.error || "Verwijderen mislukt");
+      }
+
       setStatements(statements.filter((s) => s.id !== id));
       setSelectedStatements((prev) => {
         const next = new Set(prev);
@@ -249,7 +285,17 @@ export function ExportsView({
     if (selectedStatements.size === 0) return;
     const count = selectedStatements.size;
     try {
-      await Promise.all(Array.from(selectedStatements).map((id) => deleteStatement(id)));
+      await Promise.all(
+        Array.from(selectedStatements).map(async (id) => {
+          const deleteRes = await fetch(`/api/statements/${id}`, {
+            method: "DELETE",
+          });
+          if (!deleteRes.ok) {
+            const err = await deleteRes.json().catch(() => ({}));
+            throw new Error(err.error || "Verwijderen mislukt");
+          }
+        })
+      );
       setStatements(statements.filter((s) => !selectedStatements.has(s.id)));
       setSelectedStatements(new Set());
       toast.showSuccess(`${count} statement(s) verwijderd`);
@@ -486,18 +532,41 @@ export function ExportsView({
                         if (!previewData || !selectedClient) return;
                         const period = calculatePeriod();
                         try {
-                          const entries = await getTimeEntries({
-                            clientId: selectedClient,
-                            startDate: period.start,
-                            endDate: period.end,
+                          const res = await fetch("/api/time-entries", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              clientId: selectedClient,
+                              startDate: period.start,
+                              endDate: period.end,
+                            }),
                           });
+
+                          if (!res.ok) {
+                            const err = await res.json().catch(() => ({}));
+                            throw new Error(err.error || "Ophalen time entries mislukt");
+                          }
+
+                          const { entries } = await res.json();
+
                           // Create temporary statement for CSV export
-                          const { statement } = await createStatement(
-                            selectedClient,
-                            period.start,
-                            period.end,
-                            entries
-                          );
+                          const createRes = await fetch("/api/statements", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              clientId: selectedClient,
+                              periodStart: period.start,
+                              periodEnd: period.end,
+                              entries,
+                            }),
+                          });
+
+                          if (!createRes.ok) {
+                            const err = await createRes.json().catch(() => ({}));
+                            throw new Error(err.error || "Statement aanmaken mislukt");
+                          }
+
+                          const { statement } = await createRes.json();
                           // Download CSV
                           window.location.href = `/api/csv/${statement.id}`;
                           toast.showSuccess("CSV wordt gedownload");
@@ -516,12 +585,23 @@ export function ExportsView({
                         
                         // Create statement first
                         try {
-                          const { statement, client } = await createStatement(
-                            selectedClient,
-                            previewData.period.start,
-                            previewData.period.end,
-                            previewData.entries
-                          );
+                          const createRes = await fetch("/api/statements", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              clientId: selectedClient,
+                              periodStart: previewData.period.start,
+                              periodEnd: previewData.period.end,
+                              entries: previewData.entries,
+                            }),
+                          });
+
+                          if (!createRes.ok) {
+                            const err = await createRes.json().catch(() => ({}));
+                            throw new Error(err.error || "Statement aanmaken mislukt");
+                          }
+
+                          const { statement, client } = await createRes.json();
 
                           if (!client) {
                             toast.showError("Fout: Klant niet gevonden");
@@ -557,7 +637,17 @@ export function ExportsView({
 
                               const pdfResult = await pdfResponse.json();
                               pdfUrl = pdfResult.pdfUrl;
-                              await updateStatementPdfUrl(statement.id, pdfUrl);
+                              
+                              const updateRes = await fetch(`/api/statements/${statement.id}`, {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ pdfUrl }),
+                              });
+
+                              if (!updateRes.ok) {
+                                const err = await updateRes.json().catch(() => ({}));
+                                console.error("Fout bij updaten PDF URL:", err.error);
+                              }
                             } catch (error: any) {
                               toast.showError("Fout bij genereren PDF: " + error.message);
                               setGenerating(false);

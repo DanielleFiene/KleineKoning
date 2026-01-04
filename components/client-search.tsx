@@ -8,7 +8,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { deleteClient } from "@/app/actions/clients";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -112,7 +111,15 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
   const confirmDelete = async () => {
     if (!clientToDelete) return;
     try {
-      await deleteClient(clientToDelete);
+      const res = await fetch(`/api/clients/${clientToDelete}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Verwijderen mislukt");
+      }
+
       setClients(clients.filter((c) => c.id !== clientToDelete));
       setSelectedClients((prev) => {
         const next = new Set(prev);
@@ -137,7 +144,17 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
       return;
     }
     try {
-      await Promise.all(Array.from(selectedClients).map((id) => deleteClient(id)));
+      await Promise.all(
+        Array.from(selectedClients).map(async (id) => {
+          const res = await fetch(`/api/clients/${id}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Verwijderen mislukt");
+          }
+        })
+      );
       setClients(clients.filter((c) => !selectedClients.has(c.id)));
       setSelectedClients(new Set());
       toast.showSuccess(`${selectedClients.size} klant(en) verwijderd`);

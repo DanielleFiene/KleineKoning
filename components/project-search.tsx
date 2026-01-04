@@ -8,7 +8,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { deleteProject } from "@/app/actions/projects";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -130,7 +129,15 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
   const confirmDelete = async () => {
     if (!projectToDelete) return;
     try {
-      await deleteProject(projectToDelete);
+      const res = await fetch(`/api/projects/${projectToDelete}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Verwijderen mislukt");
+      }
+
       setProjects(projects.filter((p) => p.id !== projectToDelete));
       setSelectedProjects((prev) => {
         const next = new Set(prev);
@@ -155,7 +162,17 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
       return;
     }
     try {
-      await Promise.all(Array.from(selectedProjects).map((id) => deleteProject(id)));
+      await Promise.all(
+        Array.from(selectedProjects).map(async (id) => {
+          const res = await fetch(`/api/projects/${id}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Verwijderen mislukt");
+          }
+        })
+      );
       setProjects(projects.filter((p) => !selectedProjects.has(p.id)));
       setSelectedProjects(new Set());
       toast.showSuccess(`${selectedProjects.size} project(en) verwijderd`);

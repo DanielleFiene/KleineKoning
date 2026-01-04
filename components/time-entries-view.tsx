@@ -8,8 +8,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createTimeEntry, deleteTimeEntry } from "@/app/actions/time-entries";
-import { createProject } from "@/app/actions/projects";
 import { useRouter, useSearchParams } from "next/navigation";
 import { format, startOfWeek, addWeeks, subWeeks, eachDayOfInterval, endOfWeek, isSameWeek } from "date-fns";
 import { nl } from "date-fns/locale";
@@ -233,7 +231,23 @@ export function TimeEntriesView({
       formData.set("duration_value", durationValue);
       formData.set("duration_unit", durationUnit);
 
-      await createTimeEntry(formData);
+      const res = await fetch("/api/time-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: selectedClient,
+          project_id: selectedProject,
+          date: date,
+          description: description,
+          duration_value: parseFloat(durationValue),
+          duration_unit: durationUnit,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Opslaan mislukt");
+      }
       
       setDescription("");
       setDurationValue("");
@@ -257,7 +271,15 @@ export function TimeEntriesView({
   const confirmDelete = async () => {
     if (!entryToDelete) return;
     try {
-      await deleteTimeEntry(entryToDelete);
+      const res = await fetch(`/api/time-entries/${entryToDelete}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Verwijderen mislukt");
+      }
+
       setEntries(entries.filter((e) => e.id !== entryToDelete));
       setDeleteConfirmOpen(false);
       setEntryToDelete(null);
@@ -297,7 +319,17 @@ export function TimeEntriesView({
       return;
     }
     try {
-      await Promise.all(Array.from(selectedEntries).map((id) => deleteTimeEntry(id)));
+      await Promise.all(
+        Array.from(selectedEntries).map(async (id) => {
+          const res = await fetch(`/api/time-entries/${id}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || "Verwijderen mislukt");
+          }
+        })
+      );
       setEntries(entries.filter((e) => !selectedEntries.has(e.id)));
       const count = selectedEntries.size;
       setSelectedEntries(new Set());
@@ -323,10 +355,24 @@ export function TimeEntriesView({
       formData.set("project_id", projectId);
       formData.set("date", entry.date.split("T")[0]);
       formData.set("description", entry.description);
-      formData.set("duration_value", entry.duration_minutes.toString());
-      formData.set("duration_unit", "minutes");
+      const res = await fetch("/api/time-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: clientId,
+          project_id: projectId,
+          date: entry.date,
+          description: entry.description,
+          duration_value: entry.duration_minutes,
+          duration_unit: "minutes",
+        }),
+      });
 
-      await createTimeEntry(formData);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Dupliceren mislukt");
+      }
+
       toast.showSuccess("Tijdentry gedupliceerd");
       router.refresh();
     } catch (error) {
@@ -607,11 +653,21 @@ export function TimeEntriesView({
             try {
               const createFormData = new FormData();
               createFormData.set("client_id", clientId);
-              createFormData.set("name", "Algemeen");
-              createFormData.set("default_unit", "minutes");
-              createFormData.set("rounding_rule", "none");
-              
-              await createProject(createFormData);
+              const createRes = await fetch("/api/projects", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  client_id: clientId,
+                  name: "Algemeen",
+                  default_unit: "minutes",
+                  rounding_rule: "none",
+                }),
+              });
+
+              if (!createRes.ok) {
+                const err = await createRes.json().catch(() => ({}));
+                throw new Error(err.error || "Project aanmaken mislukt");
+              }
               
               // Refresh projects list
               const allProjs: any[] = [];
@@ -661,11 +717,23 @@ export function TimeEntriesView({
             formData.set("client_id", clientId);
             formData.set("project_id", projectId);
             formData.set("date", entryDate);
-            formData.set("description", sessions[sessions.length - 1].description); // Use last description
-            formData.set("duration_value", roundedMinutes.toString());
-            formData.set("duration_unit", "minutes");
+            const res = await fetch("/api/time-entries", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                client_id: clientId,
+                project_id: projectId,
+                date: key,
+                description: sessions[sessions.length - 1].description || "",
+                duration_value: roundedMinutes,
+                duration_unit: "minutes",
+              }),
+            });
 
-            await createTimeEntry(formData);
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || "Opslaan mislukt");
+            }
             
             const clientName = getClientName(clientId);
             const projectName = projectIdRaw === "algemeen" ? "Algemeen" : getProjectName(projectId);
@@ -705,11 +773,21 @@ export function TimeEntriesView({
         try {
           const projectFormData = new FormData();
           projectFormData.set("client_id", data.clientId);
-          projectFormData.set("name", "Algemeen");
-          projectFormData.set("default_unit", "minutes");
-          projectFormData.set("rounding_rule", "none");
-          
-          await createProject(projectFormData);
+          const createRes = await fetch("/api/projects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: data.clientId,
+              name: "Algemeen",
+              default_unit: "minutes",
+              rounding_rule: "none",
+            }),
+          });
+
+          if (!createRes.ok) {
+            const err = await createRes.json().catch(() => ({}));
+            throw new Error(err.error || "Project aanmaken mislukt");
+          }
           
           // Refresh projects list
           const allProjs: any[] = [];
@@ -760,11 +838,23 @@ export function TimeEntriesView({
       formData.set("client_id", data.clientId);
       formData.set("project_id", projectId);
       formData.set("date", entryDate);
-      formData.set("description", data.description || "");
-      formData.set("duration_value", roundedMinutes.toString());
-      formData.set("duration_unit", "minutes");
+      const res = await fetch("/api/time-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: data.clientId,
+          project_id: projectId,
+          date: entryDate,
+          description: data.description || "",
+          duration_value: roundedMinutes,
+          duration_unit: "minutes",
+        }),
+      });
 
-      await createTimeEntry(formData);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Opslaan mislukt");
+      }
       
       // Show success notification
       const clientName = getClientName(data.clientId);
