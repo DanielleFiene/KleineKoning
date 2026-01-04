@@ -82,22 +82,68 @@ Met vriendelijke groet`;
     const emailServiceUrl = process.env.EMAIL_SERVICE_URL;
     const emailServiceKey = process.env.EMAIL_SERVICE_API_KEY;
 
-    // Build attachment URLs (use API routes for shorter, cleaner URLs)
+    // Build attachment URLs (use signed URLs for PDF, regular API routes for CSV)
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
       : request.nextUrl.origin);
     
-    // Use API routes instead of base64 data URLs or storage URLs
-    const pdfUrl = actuallyIncludePdf ? `${siteUrl}/api/pdf/${statementId}` : null;
+    // Generate signed URL for PDF (7 days expiration) if PDF is included
+    let pdfUrl: string | null = null;
+    if (actuallyIncludePdf && statement.pdf_url && !statement.pdf_url.startsWith("data:")) {
+      try {
+        // Extract file path from storage URL
+        // Supabase storage URLs can be:
+        // - Public: https://[project].supabase.co/storage/v1/object/public/statements/[user_id]/[statement_id].pdf
+        // - Signed: https://[project].supabase.co/storage/v1/object/sign/statements/[user_id]/[statement_id].pdf?token=...
+        let fileName: string;
+        
+        if (statement.pdf_url.includes('/statements/')) {
+          const urlParts = statement.pdf_url.split('/statements/');
+          if (urlParts.length >= 2) {
+            // Remove query parameters if present (for signed URLs)
+            const pathPart = urlParts[1].split('?')[0];
+            fileName = `statements/${pathPart}`;
+          } else {
+            throw new Error("Invalid PDF URL format");
+          }
+        } else {
+          // Fallback: construct from user ID and statement ID
+          fileName = `statements/${user.id}/${statementId}.pdf`;
+        }
+        
+        // Create signed URL with 7 days expiration (604800 seconds)
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from("statements")
+          .createSignedUrl(fileName, 604800); // 7 days in seconds
+        
+        if (!signedUrlError && signedUrlData) {
+          pdfUrl = signedUrlData.signedUrl;
+        }
+      } catch (error) {
+        console.warn("Could not create signed URL, using regular API route:", error);
+      }
+    }
+    
+    // Fallback to regular API route if signed URL generation failed
+    if (actuallyIncludePdf && !pdfUrl) {
+      pdfUrl = `${siteUrl}/api/pdf/${statementId}`;
+    }
+    
     const csvUrl = includeCsv ? `${siteUrl}/api/csv/${statementId}` : null;
 
     if (!emailServiceUrl || !emailServiceKey) {
       // Fallback: Return email data for client-side sending (mailto links)
-      // Use clean API route URLs instead of base64 data URLs
+      // Format links to be clickable in email clients
       const attachmentLinks: string[] = [];
-      if (pdfUrl) attachmentLinks.push(`PDF: ${pdfUrl}`);
-      if (csvUrl) attachmentLinks.push(`CSV: ${csvUrl}`);
-      const attachmentText = attachmentLinks.length > 0 ? `\n\nBijlagen:\n${attachmentLinks.join('\n')}` : '';
+      if (pdfUrl) {
+        attachmentLinks.push(`PDF downloaden:\n${pdfUrl}`);
+      }
+      if (csvUrl) {
+        attachmentLinks.push(`CSV downloaden:\n${csvUrl}`);
+      }
+      const attachmentText = attachmentLinks.length > 0 
+        ? `\n\n---\nBijlagen (klik op de links om te downloaden):\n\n${attachmentLinks.join('\n\n')}\n\n---` 
+        : '';
       
       return NextResponse.json({
         success: false,
@@ -161,10 +207,10 @@ Met vriendelijke groet`;
           html: `
             <p>${emailBody.replace(/\n/g, "<br>")}</p>
             ${attachments.length > 0 ? '<p>De bijlagen zijn toegevoegd aan deze email.</p>' : ''}
-            ${attachments.length === 0 && pdfUrl ? `<p><a href="${pdfUrl}">Download urenstaat PDF</a></p>` : ''}
+            ${attachments.length === 0 && pdfUrl ? `<p><a href="${pdfUrl}">Download urenstaat PDF</a> (link geldig 7 dagen)</p>` : ''}
             ${attachments.length === 0 && csvUrl ? `<p><a href="${csvUrl}">Download urenstaat CSV</a></p>` : ''}
           `,
-          text: `${emailBody}${attachments.length > 0 ? '\n\nDe bijlagen zijn toegevoegd aan deze email.' : ''}${attachments.length === 0 && pdfUrl ? `\n\nPDF: ${pdfUrl}` : ''}${attachments.length === 0 && csvUrl ? `\nCSV: ${csvUrl}` : ''}`,
+          text: `${emailBody}${attachments.length > 0 ? '\n\nDe bijlagen zijn toegevoegd aan deze email.' : ''}${attachments.length === 0 && pdfUrl ? `\n\nPDF downloaden (link geldig 7 dagen):\n${pdfUrl}` : ''}${attachments.length === 0 && csvUrl ? `\n\nCSV downloaden:\n${csvUrl}` : ''}`,
         };
         
         // Add attachments if available (format depends on email service)

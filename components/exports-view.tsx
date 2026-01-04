@@ -711,13 +711,28 @@ export function ExportsView({
                               </Button>
                               <IconButton
                                 size="small"
-                                onClick={() => {
-                                  // Copy API route URL instead of base64 data URL
-                                  const pdfUrl = `${window.location.origin}/api/pdf/${statement.id}`;
-                                  navigator.clipboard.writeText(pdfUrl);
-                                  toast.showSuccess("Link gekopieerd!");
+                                onClick={async () => {
+                                  try {
+                                    // Get signed URL with expiration (7 days)
+                                    const response = await fetch(`/api/pdf/${statement.id}/signed`);
+                                    if (response.ok) {
+                                      const data = await response.json();
+                                      navigator.clipboard.writeText(data.signedUrl);
+                                      toast.showSuccess(`Link gekopieerd! (geldig tot ${new Date(data.expiresAt).toLocaleDateString('nl-NL')})`);
+                                    } else {
+                                      // Fallback to regular API route if signed URL fails
+                                      const pdfUrl = `${window.location.origin}/api/pdf/${statement.id}`;
+                                      navigator.clipboard.writeText(pdfUrl);
+                                      toast.showSuccess("Link gekopieerd!");
+                                    }
+                                  } catch (error) {
+                                    // Fallback to regular API route on error
+                                    const pdfUrl = `${window.location.origin}/api/pdf/${statement.id}`;
+                                    navigator.clipboard.writeText(pdfUrl);
+                                    toast.showSuccess("Link gekopieerd!");
+                                  }
                                 }}
-                                title="Kopieer link"
+                                title="Kopieer link (7 dagen geldig)"
                               >
                                 <ContentCopy fontSize="small" />
                               </IconButton>
