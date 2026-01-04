@@ -1,17 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CircularProgress } from "@mui/material";
+import {
+  Box,
+  Container,
+  Paper,
+  Typography,
+  TextField,
+  Button,
+  Alert,
+  CircularProgress,
+} from "@mui/material";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
 import Image from "next/image";
+
+function createAppTheme(mode: "light" | "dark") {
+  return createTheme({
+    palette: {
+      mode,
+      primary: {
+        main: "#6366f1", // indigo-500
+      },
+      secondary: {
+        main: "#9333ea", // purple-600
+      },
+      background: {
+        default: mode === "dark" ? "#121212" : "#f5f5f5",
+        paper: mode === "dark" ? "#1e1e1e" : "#ffffff",
+      },
+    },
+  });
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [mode, setMode] = useState<"light" | "dark">("light");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Check localStorage for saved theme preference
+    const savedMode = localStorage.getItem("theme") as "light" | "dark" | null;
+    if (savedMode) {
+      setMode(savedMode);
+    } else {
+      // Check system preference
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setMode(prefersDark ? "dark" : "light");
+    }
+  }, []);
+
+  const theme = createAppTheme(mode);
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,87 +78,161 @@ export default function LoginPage() {
     setLoading(false);
   };
 
+  if (!mounted) {
+    // Prevent hydration mismatch
+    return null;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-[420px]">
-        {/* Brand Section */}
-        <div className="mb-10 text-center">
-          <div className="mb-4 inline-flex">
-            <Image
-              src="/KleineKoning.jpg"
-              alt="KleineKoning Logo"
-              width={100}
-              height={100}
-              className="rounded-2xl object-cover"
-              priority
-            />
-          </div>
-          <h1 className="mb-1 text-3xl font-bold tracking-tight">Kleine Koning</h1>
-          <p className="text-sm text-muted-foreground">Tijdregistratie en urenstaat</p>
-        </div>
-
-        {/* Login Card */}
-        <div className="rounded-2xl bg-card p-10 shadow-sm transition-shadow hover:shadow-md">
-          <div className="space-y-6">
-            {/* Header */}
-            <div className="space-y-1 text-center">
-              <h2 className="text-2xl font-semibold tracking-tight">Inloggen</h2>
-              <p className="text-sm text-muted-foreground">
-                Voer je email adres in om een magic link te ontvangen
-              </p>
-            </div>
-            
-            {/* Form */}
-            <form onSubmit={handleMagicLink} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">
-                  Email adres
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="jouw@email.nl"
-                  required
-                  disabled={loading}
-                  className="h-11 rounded-lg transition-all focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              
-              <Button 
-                type="submit" 
-                disabled={loading}
-                className="h-11 w-full rounded-lg font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          p: 3,
+          background:
+            mode === "dark"
+              ? "linear-gradient(135deg, rgba(30, 30, 30, 0.8) 0%, rgba(20, 20, 20, 0.8) 50%, rgba(30, 30, 30, 0.8) 100%)"
+              : "linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 50%, rgba(147, 51, 234, 0.1) 100%)",
+        }}
+      >
+        <Container maxWidth="sm">
+          <Box sx={{ maxWidth: 420, mx: "auto" }}>
+            {/* Brand Section */}
+            <Box sx={{ mb: 5, textAlign: "center" }}>
+              <Box
+                sx={{
+                  mb: 2,
+                  display: "inline-flex",
+                }}
               >
-                {loading ? (
-                  <>
-                    <CircularProgress size={16} sx={{ mr: 1 }} />
-                    Verzenden...
-                  </>
-                ) : (
-                  "Stuur magic link"
-                )}
-              </Button>
-              
-              {message && (
-                <div className={`rounded-xl p-4 text-sm text-center transition-all ${
-                  message.includes("Fout") 
-                    ? "bg-destructive/10 text-destructive" 
-                    : "bg-primary/10 text-primary"
-                }`}>
-                  {message}
-                </div>
-              )}
-            </form>
-          </div>
-        </div>
+                <Image
+                  src="/KleineKoning.jpg"
+                  alt="KleineKoning Logo"
+                  width={100}
+                  height={100}
+                  style={{
+                    borderRadius: "16px",
+                    objectFit: "cover",
+                  }}
+                  priority
+                />
+              </Box>
+              <Typography
+                variant="h3"
+                component="h1"
+                sx={{
+                  mb: 1,
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                Kleine Koning
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                Tijdregistratie en urenstaat
+              </Typography>
+            </Box>
 
-        {/* Footer */}
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Je ontvangt een beveiligde login link in je email
-        </p>
-      </div>
-    </div>
+            {/* Login Card */}
+            <Paper
+              elevation={1}
+              sx={{
+                p: 5,
+                borderRadius: 3,
+                transition: "box-shadow 0.2s ease-in-out",
+                "&:hover": {
+                  boxShadow: 3,
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                {/* Header */}
+                <Box sx={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 0.5 }}>
+                  <Typography
+                    variant="h5"
+                    component="h2"
+                    sx={{
+                      fontWeight: 600,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    Inloggen
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Voer je email adres in om een magic link te ontvangen
+                  </Typography>
+                </Box>
+
+                {/* Form */}
+                <Box component="form" onSubmit={handleMagicLink} sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+                  <TextField
+                    id="email"
+                    type="email"
+                    label="Email adres"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="jouw@email.nl"
+                    required
+                    disabled={loading}
+                    fullWidth
+                    variant="outlined"
+                  />
+
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={loading}
+                    fullWidth
+                    sx={{
+                      py: 1.5,
+                      fontWeight: 500,
+                      textTransform: "none",
+                    }}
+                    startIcon={
+                      loading ? (
+                        <CircularProgress size={16} sx={{ color: "inherit" }} />
+                      ) : null
+                    }
+                  >
+                    {loading ? "Verzenden..." : "Stuur magic link"}
+                  </Button>
+
+                  {message && (
+                    <Alert
+                      severity={message.includes("Fout") ? "error" : "success"}
+                      sx={{
+                        borderRadius: 2,
+                      }}
+                    >
+                      {message}
+                    </Alert>
+                  )}
+                </Box>
+              </Box>
+            </Paper>
+
+            {/* Footer */}
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                mt: 3,
+                display: "block",
+                textAlign: "center",
+              }}
+            >
+              Je ontvangt een beveiligde login link in je email
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 }
