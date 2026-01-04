@@ -10,9 +10,9 @@ import React from "react";
 // Helper function to safely render PDF with type assertion
 // This is needed because PDFStatement returns a Document, but TypeScript doesn't recognize it
 async function renderPDFToBuffer(element: React.ReactElement): Promise<Buffer> {
-  // @ts-ignore - PDFStatement returns a Document, but TypeScript doesn't recognize it
-  // This is a known limitation of @react-pdf/renderer types
-  return await renderToBuffer(element);
+  // Use explicit type casting that works in all build environments
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return await renderToBuffer(element as any);
 }
 
 // Helper function to format date string (YYYY-MM-DD) to readable format
