@@ -234,6 +234,25 @@ export async function deleteStatement(id: string) {
     throw new Error("Not authenticated");
   }
 
+  // Get statement to check for PDF URL before deletion
+  const { data: statement } = await supabase
+    .from("statements")
+    .select("pdf_url")
+    .eq("id", id)
+    .eq("owner_user_id", user.id)
+    .single();
+
+  // Delete PDF from storage if it exists (and is in storage, not base64)
+  if (statement?.pdf_url && !statement.pdf_url.startsWith("data:")) {
+    try {
+      const fileName = `${user.id}/${id}.pdf`;
+      await supabase.storage.from("statements").remove([fileName]);
+    } catch (storageError) {
+      // Log but don't fail - PDF might not exist in storage (e.g., if bucket doesn't exist)
+      console.warn("Could not delete PDF from storage:", storageError);
+    }
+  }
+
   // Delete statement lines first (cascade should handle this, but being explicit)
   const { error: linesError } = await supabase
     .from("statement_lines")

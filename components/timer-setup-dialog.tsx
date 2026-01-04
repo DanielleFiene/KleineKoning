@@ -130,9 +130,12 @@ export function TimerSetupDialog({
               label="Project"
               onChange={(e) => setSelectedProject(e.target.value)}
             >
-              <MenuItem value="algemeen">
-                Algemeen
-              </MenuItem>
+              {/* Only show hardcoded "Algemeen" if it doesn't already exist in projects */}
+              {!projects.some((p) => p.id === "algemeen" || p.name === "Algemeen") && (
+                <MenuItem value="algemeen">
+                  Algemeen
+                </MenuItem>
+              )}
               {projects.map((project) => (
                 <MenuItem key={project.id} value={project.id}>
                   {project.name}

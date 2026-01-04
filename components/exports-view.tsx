@@ -620,7 +620,8 @@ export function ExportsView({
                   variant="outlined"
                   startIcon={<DeleteIcon />}
                   onClick={() => {
-                    if (confirm(`Weet je zeker dat je ${selectedStatements.size} statement(s) wilt verwijderen?`)) {
+                    const message = `Weet je zeker dat je ${selectedStatements.size} statement(s) wilt verwijderen?\n\n⚠️ Let op: Deze actie kan niet ongedaan worden gemaakt. Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.`;
+                    if (confirm(message)) {
                       handleBulkDelete();
                     }
                   }}
@@ -737,7 +738,6 @@ export function ExportsView({
                                   setEmailDialogOpen(true);
                                 }}
                                 variant="outlined"
-                                size="small"
                               >
                                 Mailen
                               </Button>
@@ -747,13 +747,17 @@ export function ExportsView({
                               Geen PDF
                             </Typography>
                           )}
-                          <MuiLink
-                            href={`/api/csv/${statement.id}`}
-                            sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                          <Button
+                            size="small"
+                            startIcon={<Download />}
+                            onClick={() => {
+                              window.open(`/api/csv/${statement.id}`, '_blank');
+                            }}
+                            variant="outlined"
+                            sx={{ minWidth: 'auto' }}
                           >
-                            <Download fontSize="small" />
                             CSV
-                          </MuiLink>
+                          </Button>
                           <IconButton
                             size="small"
                             color="error"
@@ -815,7 +819,7 @@ export function ExportsView({
                         }}
                         size="small"
                       >
-                        <Delete />
+                        <DeleteIcon />
                       </IconButton>
                     )}
                   </Box>
@@ -957,7 +961,7 @@ export function ExportsView({
                 }
               }}
               variant="contained"
-              disabled={sendingEmail}
+              disabled={sendingEmail || emailAddresses.every(email => !email.trim() || !email.includes("@"))}
               startIcon={<Email />}
             >
               {sendingEmail ? "Verzenden..." : "Verstuur"}
@@ -975,8 +979,11 @@ export function ExportsView({
         >
           <DialogTitle>Statement verwijderen?</DialogTitle>
           <DialogContent>
-            <Typography>
-              Weet je zeker dat je dit statement wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+            <Typography sx={{ mb: 2 }}>
+              Weet je zeker dat je dit statement wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt en alle gegevens worden permanent verwijderd.
+            </Typography>
+            <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600 }}>
+              ⚠️ Let op: Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.
             </Typography>
           </DialogContent>
           <DialogActions>

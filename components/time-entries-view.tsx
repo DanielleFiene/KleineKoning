@@ -341,7 +341,8 @@ export function TimeEntriesView({
 
   const handleBulkDeleteEntries = async () => {
     if (selectedEntries.size === 0) return;
-    if (!confirm(`Weet je zeker dat je ${selectedEntries.size} entry(s) wilt verwijderen?`)) {
+    const message = `Weet je zeker dat je ${selectedEntries.size} entry(s) wilt verwijderen?\n\n⚠️ Let op: Deze actie kan niet ongedaan worden gemaakt. Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.`;
+    if (!confirm(message)) {
       return;
     }
     try {
@@ -1769,8 +1770,11 @@ export function TimeEntriesView({
       <Dialog open={deleteConfirmOpen} onClose={() => { setDeleteConfirmOpen(false); setEntryToDelete(null); }}>
         <DialogTitle>Entry verwijderen?</DialogTitle>
         <DialogContent>
-          <Typography>
-            Weet je zeker dat je deze entry wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.
+          <Typography sx={{ mb: 2 }}>
+            Weet je zeker dat je deze entry wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt en alle gegevens worden permanent verwijderd.
+          </Typography>
+          <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600 }}>
+            ⚠️ Let op: Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.
           </Typography>
         </DialogContent>
         <DialogActions>

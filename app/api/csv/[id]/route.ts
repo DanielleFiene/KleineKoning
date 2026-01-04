@@ -41,6 +41,7 @@ export async function GET(
     const csvRows = [];
     csvRows.push(["Datum", "Project", "Omschrijving", "Duur (minuten)"]);
     
+    let totalMinutes = 0;
     statement.statement_lines.forEach((line: any) => {
       csvRows.push([
         line.date,
@@ -48,7 +49,18 @@ export async function GET(
         line.description,
         line.duration_minutes.toString(),
       ]);
+      totalMinutes += line.duration_minutes;
     });
+    
+    // Add total row
+    csvRows.push([]); // Empty row for spacing
+    csvRows.push(["Totaal", "", "", totalMinutes.toString()]);
+    
+    // Format total duration (hours and minutes)
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const totalFormatted = minutes > 0 ? `${hours}u ${minutes}min` : `${hours}u`;
+    csvRows.push(["Totaal (geformatteerd)", "", "", totalFormatted]);
     
     const csvContent = csvRows
       .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))

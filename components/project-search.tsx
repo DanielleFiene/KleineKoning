@@ -143,7 +143,8 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
 
   const handleBulkDelete = async () => {
     if (selectedProjects.size === 0) return;
-    if (!confirm(`Weet je zeker dat je ${selectedProjects.size} project(en) wilt verwijderen?`)) {
+    const message = `Weet je zeker dat je ${selectedProjects.size} project(en) wilt verwijderen?\n\n⚠️ Let op: Alle bijbehorende tijdentries worden ook permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.\n\nControleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.`;
+    if (!confirm(message)) {
       return;
     }
     try {
@@ -443,8 +444,11 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
       <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
         <DialogTitle>Project verwijderen?</DialogTitle>
         <DialogContent>
-          <Typography>
-            Weet je zeker dat je dit project wilt verwijderen? Alle bijbehorende tijdentries worden ook verwijderd. Deze actie kan niet ongedaan worden gemaakt.
+          <Typography sx={{ mb: 2 }}>
+            Weet je zeker dat je dit project wilt verwijderen? Alle bijbehorende tijdentries worden ook permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.
+          </Typography>
+          <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600 }}>
+            ⚠️ Let op: Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.
           </Typography>
         </DialogContent>
         <DialogActions>

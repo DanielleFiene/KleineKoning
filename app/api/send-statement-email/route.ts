@@ -57,6 +57,9 @@ export async function POST(request: NextRequest) {
     
     // If PDF is selected but doesn't exist, just skip it (user probably wants CSV only)
     const actuallyIncludePdf = includePdf && !!statement.pdf_url;
+    
+    // Prepare attachments for email service (if configured)
+    const attachments: Array<{ filename: string; content: string; type: string }> = [];
 
     // Format dates
     const periodStart = format(new Date(statement.period_start), "d MMMM yyyy", { locale: nl });
@@ -110,31 +113,92 @@ Met vriendelijke groet`;
       });
     }
 
+    // Fetch PDF and CSV as base64 for attachments (if email service supports it)
+    if (actuallyIncludePdf && pdfUrl) {
+      try {
+        const pdfResponse = await fetch(pdfUrl);
+        if (pdfResponse.ok) {
+          const pdfArrayBuffer = await pdfResponse.arrayBuffer();
+          const pdfBase64 = btoa(String.fromCharCode(...new Uint8Array(pdfArrayBuffer)));
+          attachments.push({
+            filename: `urenstaat_${statement.statement_number}_${clientName.replace(/[^a-zA-Z0-9]/g, "_")}.pdf`,
+            content: pdfBase64,
+            type: "application/pdf",
+          });
+        }
+      } catch (error) {
+        console.warn("Could not fetch PDF for attachment:", error);
+      }
+    }
+    
+    if (includeCsv && csvUrl) {
+      try {
+        const csvResponse = await fetch(csvUrl);
+        if (csvResponse.ok) {
+          const csvText = await csvResponse.text();
+          const csvBase64 = btoa(unescape(encodeURIComponent(csvText)));
+          attachments.push({
+            filename: `urenstaat_${statement.statement_number}_${clientName.replace(/[^a-zA-Z0-9]/g, "_")}.csv`,
+            content: csvBase64,
+            type: "text/csv",
+          });
+        }
+      } catch (error) {
+        console.warn("Could not fetch CSV for attachment:", error);
+      }
+    }
+
     // Send emails via email service
     try {
-      const emailPromises = emailAddresses.map((email: string) =>
-        fetch(emailServiceUrl, {
+      const emailPromises = emailAddresses.map((email: string) => {
+        // Build email payload - different services have different formats
+        // Resend format: { attachments: [{ filename, content, type }] }
+        // SendGrid format: { attachments: [{ content, filename, type }] }
+        // We'll use a generic format that should work with most services
+        const emailPayload: any = {
+          to: email,
+          subject: `Urenstaat ${statement.statement_number} - ${clientName}`,
+          html: `
+            <p>${emailBody.replace(/\n/g, "<br>")}</p>
+            ${attachments.length > 0 ? '<p>De bijlagen zijn toegevoegd aan deze email.</p>' : ''}
+            ${attachments.length === 0 && pdfUrl ? `<p><a href="${pdfUrl}">Download urenstaat PDF</a></p>` : ''}
+            ${attachments.length === 0 && csvUrl ? `<p><a href="${csvUrl}">Download urenstaat CSV</a></p>` : ''}
+          `,
+          text: `${emailBody}${attachments.length > 0 ? '\n\nDe bijlagen zijn toegevoegd aan deze email.' : ''}${attachments.length === 0 && pdfUrl ? `\n\nPDF: ${pdfUrl}` : ''}${attachments.length === 0 && csvUrl ? `\nCSV: ${csvUrl}` : ''}`,
+        };
+        
+        // Add attachments if available (format depends on email service)
+        if (attachments.length > 0) {
+          emailPayload.attachments = attachments.map(att => ({
+            filename: att.filename,
+            content: att.content,
+            type: att.type,
+          }));
+        }
+        
+        return fetch(emailServiceUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${emailServiceKey}`,
           },
-            body: JSON.stringify({
-            to: email,
-            subject: `Urenstaat ${statement.statement_number} - ${clientName}`,
-            html: `
-              <p>${emailBody.replace(/\n/g, "<br>")}</p>
-              ${pdfUrl ? `<p><a href="${pdfUrl}">Download urenstaat PDF</a></p>` : ''}
-              ${csvUrl ? `<p><a href="${csvUrl}">Download urenstaat CSV</a></p>` : ''}
-            `,
-            text: `${emailBody}${pdfUrl ? `\n\nPDF: ${pdfUrl}` : ''}${csvUrl ? `\nCSV: ${csvUrl}` : ''}`,
-          }),
-        })
-      );
+          body: JSON.stringify(emailPayload),
+        });
+      });
 
       const results = await Promise.allSettled(emailPromises);
-      const successful = results.filter((r) => r.status === "fulfilled").length;
-      const failed = results.filter((r) => r.status === "rejected").length;
+      
+      // Check both fulfillment and HTTP response status
+      // fetch() resolves even on HTTP errors (400, 500, etc.), so we need to check response.ok
+      const successful = results.filter((r) => {
+        if (r.status === "fulfilled") {
+          // Check if the HTTP response was successful (status 200-299)
+          return r.value.ok;
+        }
+        return false;
+      }).length;
+      
+      const failed = results.length - successful;
 
       return NextResponse.json({
         success: true,
