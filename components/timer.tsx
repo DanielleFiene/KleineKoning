@@ -1,4 +1,10 @@
-// components/timer.tsx
+/**
+ * components/timer.tsx
+ * 
+ * Timer component voor het bijhouden van tijd. Gebruikers kunnen een timer starten/stoppen
+ * voor een specifieke klant en project. De timer slaat automatisch entries op met correcte
+ * datum en afronding wanneer gestopt. Ondersteunt localStorage voor persistentie.
+ */
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -24,6 +30,7 @@ interface TimerSession {
   projectId: string;
   description: string;
   timestamp: number;
+  date: string; // Date when the timer session started (YYYY-MM-DD format)
 }
 
 interface TimerState {

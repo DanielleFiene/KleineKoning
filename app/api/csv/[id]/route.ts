@@ -1,3 +1,10 @@
+/**
+ * app/api/csv/[id]/route.ts
+ * 
+ * API route voor het serveren van CSV exports van urenstaten. Genereert CSV met alle entries,
+ * totaal aantal minuten en geformatteerd totaal (uren en minuten). Controleert authenticatie
+ * en autorisatie. Retourneert CSV met UTF-8 BOM voor Excel compatibiliteit.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStatement } from "@/app/actions/statements";

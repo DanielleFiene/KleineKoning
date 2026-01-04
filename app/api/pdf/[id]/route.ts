@@ -1,3 +1,10 @@
+/**
+ * app/api/pdf/[id]/route.ts
+ * 
+ * API route voor het serveren van PDF urenstaten. Haalt PDF op uit Supabase Storage of
+ * genereert deze on-the-fly als deze niet bestaat. Controleert authenticatie en autorisatie.
+ * Redirect naar expired page als signed URL verlopen is.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStatement } from "@/app/actions/statements";

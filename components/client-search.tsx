@@ -1,3 +1,10 @@
+/**
+ * components/client-search.tsx
+ * 
+ * Component voor het zoeken, beheren en verwijderen van klanten. Ondersteunt filtering
+ * op BTW profiel, sortering, bulk delete met waarschuwing over 7-jaar bewaarplicht,
+ * en CSV export functionaliteit.
+ */
 "use client";
 
 import { useState, useMemo } from "react";

@@ -1,3 +1,9 @@
+/**
+ * app/login/page.tsx
+ * 
+ * Login pagina met magic link authenticatie via Supabase. Toont branding, dark mode toggle,
+ * en footer. Redirect naar dashboard na succesvolle authenticatie.
+ */
 "use client";
 
 import { useState, useEffect } from "react";

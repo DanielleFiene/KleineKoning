@@ -1,3 +1,10 @@
+/**
+ * components/app-footer.tsx
+ * 
+ * Herbruikbare footer component voor alle pagina's. Toont copyright, links naar
+ * legal pages (Privacy, Algemene Voorwaarden, Verwerkersovereenkomst), contact info,
+ * en een korte disclaimer. Dynamisch jaar en dark mode support.
+ */
 "use client";
 
 import { Box, Container, Typography, Link, Divider } from "@mui/material";

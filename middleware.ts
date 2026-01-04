@@ -1,3 +1,10 @@
+/**
+ * middleware.ts
+ * 
+ * Next.js middleware voor authenticatie en route protection. Gebruikt Supabase SSR client
+ * om gebruikerssessies te verifiëren. Beschermt alle routes behalve /login, /auth/callback,
+ * en legal pages (/privacy, /algemene-voorwaarden, /verwerkersovereenkomst).
+ */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 

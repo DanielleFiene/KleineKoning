@@ -1,3 +1,10 @@
+/**
+ * app/api/send-statement-email/route.ts
+ * 
+ * API route voor het versturen van urenstaten per email. Ondersteunt PDF en/of CSV attachments.
+ * Gebruikt signed URLs voor PDF links (7 dagen geldig). Valt terug op mailto links als
+ * geen email service is geconfigureerd. Verwerkt grote bestanden via chunked base64 encoding.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { format } from "date-fns";
@@ -160,8 +167,10 @@ Met vriendelijke groet`;
       if (csvUrl) {
         attachmentLinks.push(`CSV downloaden:\n${csvUrl}`);
       }
+      // Use singular "link" if only one link, plural "links" if multiple
+      const linkText = attachmentLinks.length === 1 ? "link" : "links";
       const attachmentText = attachmentLinks.length > 0 
-        ? `\n\n---\nBijlagen (klik op de links om te downloaden):\n\n${attachmentLinks.join('\n\n')}\n\n---` 
+        ? `\n\n---\nBijlagen (klik op de ${linkText} om te downloaden):\n\n${attachmentLinks.join('\n\n')}\n\n---` 
         : '';
       
       return NextResponse.json({
@@ -226,8 +235,8 @@ Met vriendelijke groet`;
           html: `
             <p>${emailBody.replace(/\n/g, "<br>")}</p>
             ${attachments.length > 0 ? '<p>De bijlagen zijn toegevoegd aan deze email.</p>' : ''}
-            ${attachments.length === 0 && pdfUrl ? `<p><a href="${pdfUrl}">Download urenstaat PDF</a> (link geldig 7 dagen)</p>` : ''}
-            ${attachments.length === 0 && csvUrl ? `<p><a href="${csvUrl}">Download urenstaat CSV</a></p>` : ''}
+            ${attachments.length === 0 && pdfUrl ? `<p style="margin-top: 16px;"><a href="${pdfUrl}" style="color: #9333ea; text-decoration: underline; font-weight: 500;">Download urenstaat PDF</a> <span style="color: #666; font-size: 0.9em;">(link geldig 7 dagen)</span></p>` : ''}
+            ${attachments.length === 0 && csvUrl ? `<p style="margin-top: 16px;"><a href="${csvUrl}" style="color: #9333ea; text-decoration: underline; font-weight: 500;">Download urenstaat CSV</a></p>` : ''}
           `,
           text: `${emailBody}${attachments.length > 0 ? '\n\nDe bijlagen zijn toegevoegd aan deze email.' : ''}${attachments.length === 0 && pdfUrl ? `\n\nPDF downloaden (link geldig 7 dagen):\n${pdfUrl}` : ''}${attachments.length === 0 && csvUrl ? `\n\nCSV downloaden:\n${csvUrl}` : ''}`,
         };

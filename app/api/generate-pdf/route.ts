@@ -1,4 +1,10 @@
-// app/api/generate-pdf/route.ts
+/**
+ * app/api/generate-pdf/route.ts
+ * 
+ * API route voor het genereren van PDF urenstaten. Gebruikt pdf-lib voor Edge Runtime
+ * compatibele PDF generatie. Uploadt PDFs naar Supabase Storage. Valt terug op base64
+ * data URLs als storage bucket niet beschikbaar is. Verwerkt grote bestanden via chunked encoding.
+ */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateStatementPDF } from "@/lib/utils/pdf-generator";

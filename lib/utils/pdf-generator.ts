@@ -1,6 +1,10 @@
-// lib/utils/pdf-generator.ts
-// PDF generator using pdf-lib (Edge Runtime compatible)
-
+/**
+ * lib/utils/pdf-generator.ts
+ * 
+ * PDF generator utility die pdf-lib gebruikt voor Edge Runtime compatibele PDF generatie.
+ * Genereert professionele urenstaat PDFs met header, entries gegroepeerd per dag, dagtotalen,
+ * en eindtotaal. Ondersteunt paginering en Nederlandse datum formatting.
+ */
 import { PDFDocument, rgb, StandardFonts, PDFFont, PDFPage } from 'pdf-lib';
 
 interface StatementEntry {

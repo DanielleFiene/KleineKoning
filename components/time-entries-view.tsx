@@ -1,4 +1,10 @@
-// components/time-entries-view.tsx
+/**
+ * components/time-entries-view.tsx
+ * 
+ * Hoofdcomponent voor het weergeven en beheren van tijdentries. Toont weekoverzicht
+ * met filter opties (klant, project, zoekquery). Integreert timer component en
+ * ondersteunt bulk delete. Verbergt dagen zonder entries bij filtering.
+ */
 "use client";
 
 import { useState, useEffect } from "react";

@@ -1,3 +1,9 @@
+/**
+ * app/(dashboard)/layout.tsx
+ * 
+ * Dashboard layout component met sidebar navigatie, user menu, en responsive design.
+ * Bevat AppFooter component. Ondersteunt mobile sidebar toggle en dark mode.
+ */
 "use client";
 
 import { SidebarProvider, SidebarInset, useSidebar } from "@/components/ui/sidebar";

@@ -1,4 +1,9 @@
-// app/layout.tsx
+/**
+ * app/layout.tsx
+ * 
+ * Root layout component voor de hele applicatie. Definieert metadata, favicons,
+ * en globale styling. Wrapper voor alle pagina's.
+ */
 import type { Metadata } from "next";
 import "./globals.css";
 

@@ -1,3 +1,10 @@
+/**
+ * components/project-search.tsx
+ * 
+ * Component voor het zoeken, beheren en verwijderen van projecten. Ondersteunt filtering
+ * op klant, unit, afrondingsregel, sortering, bulk delete met waarschuwing over
+ * 7-jaar bewaarplicht, en weergave van totaal uren per project.
+ */
 "use client";
 
 import { useState, useMemo } from "react";

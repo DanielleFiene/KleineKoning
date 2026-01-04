@@ -1,3 +1,10 @@
+/**
+ * components/timer-setup-dialog.tsx
+ * 
+ * Dialog component voor het instellen van timer parameters (klant, project, omschrijving).
+ * Project is optioneel - "Algemeen" project wordt automatisch beschikbaar gemaakt als
+ * optie. Slaat instellingen op in localStorage voor snelle hergebruik.
+ */
 "use client";
 
 import { useState, useEffect } from "react";

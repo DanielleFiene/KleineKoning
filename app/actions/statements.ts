@@ -1,4 +1,10 @@
-// app/actions/statements.ts
+/**
+ * app/actions/statements.ts
+ * 
+ * Server actions voor het beheren van urenstaat statements. Functies voor het aanmaken,
+ * ophalen, updaten en verwijderen van statements. Verwijdert ook PDFs uit Supabase Storage
+ * bij statement verwijdering. Genereert unieke statement nummers.
+ */
 "use server";
 
 import { createClient } from "@/lib/supabase/server";

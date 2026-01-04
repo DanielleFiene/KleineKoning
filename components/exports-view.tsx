@@ -1,3 +1,10 @@
+/**
+ * components/exports-view.tsx
+ * 
+ * Component voor het genereren en beheren van urenstaat exports. Gebruikers kunnen
+ * statements genereren voor een specifieke klant en periode, PDF/CSV exporteren, en
+ * statements per email versturen. Ondersteunt bulk delete en signed URL generatie.
+ */
 "use client";
 
 import { useState } from "react";
