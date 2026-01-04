@@ -1075,14 +1075,47 @@ export function TimeEntriesView({
 
       {/* Search Results */}
       {searchQuery && filteredEntries.length > 0 && (
-        <Paper elevation={2} sx={{ p: 2, mb: 2, backgroundColor: "info.light" }}>
+        <Paper 
+          elevation={2} 
+          sx={{ 
+            p: 2, 
+            mb: 2, 
+            backgroundColor: (theme) => theme.palette.mode === 'dark' 
+              ? 'rgba(33, 150, 243, 0.15)' 
+              : 'rgba(33, 150, 243, 0.1)',
+            border: '1px solid',
+            borderColor: (theme) => theme.palette.mode === 'dark'
+              ? 'rgba(33, 150, 243, 0.3)'
+              : 'rgba(33, 150, 243, 0.3)',
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-            <Search color="primary" />
-            <Typography variant="body2" fontWeight={600}>
+            <Search sx={{ color: (theme) => theme.palette.mode === 'dark' ? 'info.light' : 'info.dark' }} />
+            <Typography 
+              variant="body2" 
+              fontWeight={600}
+              sx={{ 
+                color: (theme) => theme.palette.mode === 'dark' ? 'info.light' : 'info.dark',
+              }}
+            >
               {filteredEntries.length} {filteredEntries.length === 1 ? "entry gevonden" : "entries gevonden"}
             </Typography>
             <Box sx={{ flex: 1 }} />
-            <Button size="small" onClick={() => setSearchQuery("")}>
+            <Button 
+              size="small" 
+              onClick={() => setSearchQuery("")}
+              variant="outlined"
+              sx={{
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'info.light' : 'info.dark',
+                color: (theme) => theme.palette.mode === 'dark' ? 'info.light' : 'info.dark',
+                '&:hover': {
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'info.main' : 'info.main',
+                  backgroundColor: (theme) => theme.palette.mode === 'dark' 
+                    ? 'rgba(33, 150, 243, 0.1)' 
+                    : 'rgba(33, 150, 243, 0.05)',
+                },
+              }}
+            >
               Wissen
             </Button>
           </Box>
@@ -1176,14 +1209,47 @@ export function TimeEntriesView({
       
       {/* No Results Message */}
       {searchQuery && filteredEntries.length === 0 && (
-        <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: "warning.light" }}>
+        <Paper 
+          elevation={1} 
+          sx={{ 
+            p: 2, 
+            mb: 2, 
+            backgroundColor: (theme) => theme.palette.mode === 'dark' 
+              ? 'rgba(255, 193, 7, 0.15)' 
+              : 'rgba(255, 193, 7, 0.1)',
+            border: '1px solid',
+            borderColor: (theme) => theme.palette.mode === 'dark'
+              ? 'rgba(255, 193, 7, 0.3)'
+              : 'rgba(255, 193, 7, 0.3)',
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Search color="warning" />
-            <Typography variant="body2">
+            <Search sx={{ color: (theme) => theme.palette.mode === 'dark' ? 'warning.light' : 'warning.dark' }} />
+            <Typography 
+              variant="body2"
+              sx={{ 
+                color: (theme) => theme.palette.mode === 'dark' ? 'warning.light' : 'warning.dark',
+                fontWeight: 500,
+              }}
+            >
               Geen entries gevonden voor "{searchQuery}"
             </Typography>
             <Box sx={{ flex: 1 }} />
-            <Button size="small" onClick={() => setSearchQuery("")}>
+            <Button 
+              size="small" 
+              onClick={() => setSearchQuery("")}
+              variant="outlined"
+              sx={{
+                borderColor: (theme) => theme.palette.mode === 'dark' ? 'warning.light' : 'warning.dark',
+                color: (theme) => theme.palette.mode === 'dark' ? 'warning.light' : 'warning.dark',
+                '&:hover': {
+                  borderColor: (theme) => theme.palette.mode === 'dark' ? 'warning.main' : 'warning.main',
+                  backgroundColor: (theme) => theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 193, 7, 0.1)' 
+                    : 'rgba(255, 193, 7, 0.05)',
+                },
+              }}
+            >
               Wissen
             </Button>
           </Box>

@@ -1,48 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStatement } from "@/app/actions/statements";
-import { generateStatementHTML } from "@/lib/utils/pdf-html";
+import { generateStatementPDF } from "@/lib/utils/pdf-generator";
 
 export const runtime = 'edge';
-
-// Convert HTML to PDF using Edge-compatible service
-async function htmlToPdf(html: string): Promise<Uint8Array> {
-  // Use a PDF generation service that works with Edge Runtime
-  const pdfServiceUrl = process.env.PDF_SERVICE_URL || 'https://api.pdfshift.io/v3/convert/pdf';
-  const pdfServiceKey = process.env.PDF_SERVICE_API_KEY;
-  
-  if (pdfServiceKey && pdfServiceUrl) {
-    try {
-      const response = await fetch(pdfServiceUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(`api:${pdfServiceKey}`)}`,
-        },
-        body: JSON.stringify({
-          source: html,
-          format: 'pdf',
-        }),
-      });
-      
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer();
-        return new Uint8Array(arrayBuffer);
-      }
-    } catch (error) {
-      console.warn('PDF service failed, falling back to HTML:', error);
-    }
-  }
-  
-  // Fallback: Return HTML for client-side conversion
-  // This allows the app to work without a PDF service configured
-  console.warn('PDF service not configured, returning HTML for client-side conversion');
-  const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
-  const dataUrl = `data:text/html;base64,${htmlBase64}`;
-  
-  // Return HTML instead of PDF when service is not configured
-  throw new Error('PDF_SERVICE_NOT_CONFIGURED:' + dataUrl);
-}
 
 export async function GET(
   request: NextRequest,
@@ -90,7 +51,7 @@ export async function GET(
             return new NextResponse(uint8Array, {
               headers: {
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,
+                "Content-Disposition": `attachment; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,
               },
             });
           }
@@ -119,8 +80,8 @@ export async function GET(
       duration_minutes: line.duration_minutes,
     }));
 
-    // Generate HTML for PDF
-    const html = generateStatementHTML(
+    // Generate PDF directly using pdf-lib (Edge Runtime compatible)
+    const pdfBytes = await generateStatementPDF(
       statement.clients?.name || "Onbekend",
       statement.statement_number,
       statement.period_start,
@@ -128,34 +89,6 @@ export async function GET(
       pdfEntries,
       totalMinutes
     );
-
-    // Convert HTML to PDF (Edge Runtime compatible)
-    let pdfBytes: Uint8Array;
-    
-    try {
-      pdfBytes = await htmlToPdf(html);
-    } catch (error: any) {
-      // If PDF service is not configured, return HTML
-      if (error.message?.startsWith('PDF_SERVICE_NOT_CONFIGURED:')) {
-        const htmlDataUrl = error.message.replace('PDF_SERVICE_NOT_CONFIGURED:', '');
-        // Decode base64 HTML (Edge Runtime compatible)
-        const base64Content = htmlDataUrl.replace('data:text/html;base64,', '');
-        // Use TextDecoder for Edge Runtime compatibility
-        const binaryString = atob(base64Content);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const htmlContent = new TextDecoder('utf-8').decode(bytes);
-        return new NextResponse(htmlContent, {
-          headers: {
-            "Content-Type": "text/html; charset=utf-8",
-            "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.html"`,
-          },
-        });
-      }
-      throw error;
-    }
 
     // Convert to ArrayBuffer for NextResponse
     const arrayBuffer = pdfBytes.buffer instanceof ArrayBuffer
@@ -166,7 +99,7 @@ export async function GET(
     return new NextResponse(arrayBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,
+        "Content-Disposition": `attachment; filename="urenstaat_${statement.clients?.name || "export"}_${statement.period_start}_${statement.period_end}.pdf"`,
       },
     });
   } catch (error) {

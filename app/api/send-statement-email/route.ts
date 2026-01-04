@@ -79,22 +79,23 @@ Met vriendelijke groet`;
     const emailServiceUrl = process.env.EMAIL_SERVICE_URL;
     const emailServiceKey = process.env.EMAIL_SERVICE_API_KEY;
 
-    // Build attachment URLs
-    const attachments: string[] = [];
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL 
+    // Build attachment URLs (use API routes for shorter, cleaner URLs)
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
+      : request.nextUrl.origin);
     
-    if (actuallyIncludePdf && statement.pdf_url) {
-      attachments.push(`PDF: ${statement.pdf_url}`);
-    }
-    if (includeCsv) {
-      attachments.push(`CSV: ${siteUrl}/api/csv/${statementId}`);
-    }
+    // Use API routes instead of base64 data URLs or storage URLs
+    const pdfUrl = actuallyIncludePdf ? `${siteUrl}/api/pdf/${statementId}` : null;
+    const csvUrl = includeCsv ? `${siteUrl}/api/csv/${statementId}` : null;
 
     if (!emailServiceUrl || !emailServiceKey) {
       // Fallback: Return email data for client-side sending (mailto links)
-      const attachmentText = attachments.length > 0 ? `\n\nBijlagen:\n${attachments.join('\n')}` : '';
+      // Use clean API route URLs instead of base64 data URLs
+      const attachmentLinks: string[] = [];
+      if (pdfUrl) attachmentLinks.push(`PDF: ${pdfUrl}`);
+      if (csvUrl) attachmentLinks.push(`CSV: ${csvUrl}`);
+      const attachmentText = attachmentLinks.length > 0 ? `\n\nBijlagen:\n${attachmentLinks.join('\n')}` : '';
+      
       return NextResponse.json({
         success: false,
         fallback: true,
@@ -102,8 +103,8 @@ Met vriendelijke groet`;
           to: emailAddresses,
           subject: `Urenstaat ${statement.statement_number} - ${clientName}`,
           body: emailBody + attachmentText,
-          pdfUrl: actuallyIncludePdf ? statement.pdf_url : null,
-          csvUrl: includeCsv ? `${siteUrl}/api/csv/${statementId}` : null,
+          pdfUrl: pdfUrl,
+          csvUrl: csvUrl,
         },
         message: "Email service niet geconfigureerd. Gebruik mailto links.",
       });
@@ -123,10 +124,10 @@ Met vriendelijke groet`;
             subject: `Urenstaat ${statement.statement_number} - ${clientName}`,
             html: `
               <p>${emailBody.replace(/\n/g, "<br>")}</p>
-              ${actuallyIncludePdf && statement.pdf_url ? `<p><a href="${statement.pdf_url}">Download urenstaat PDF</a></p>` : ''}
-              ${includeCsv ? `<p><a href="${siteUrl}/api/csv/${statementId}">Download urenstaat CSV</a></p>` : ''}
+              ${pdfUrl ? `<p><a href="${pdfUrl}">Download urenstaat PDF</a></p>` : ''}
+              ${csvUrl ? `<p><a href="${csvUrl}">Download urenstaat CSV</a></p>` : ''}
             `,
-            text: `${emailBody}\n\n${attachments.map(a => `Download: ${a.split(': ')[1]}`).join('\n')}`,
+            text: `${emailBody}${pdfUrl ? `\n\nPDF: ${pdfUrl}` : ''}${csvUrl ? `\nCSV: ${csvUrl}` : ''}`,
           }),
         })
       );

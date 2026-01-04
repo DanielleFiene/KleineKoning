@@ -1,59 +1,9 @@
 // app/api/generate-pdf/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateStatementHTML } from "@/lib/utils/pdf-html";
+import { generateStatementPDF } from "@/lib/utils/pdf-generator";
 
 export const runtime = 'edge';
-
-// Convert HTML to PDF using Edge-compatible service
-async function htmlToPdf(html: string): Promise<Uint8Array> {
-  // Use a PDF generation service that works with Edge Runtime
-  // Options:
-  // 1. PDFShift (https://pdfshift.io) - Free tier available
-  // 2. PDF.co (https://pdf.co) - Free tier available
-  // 3. Cloudflare Browser Rendering API (if available)
-  
-  const pdfServiceUrl = process.env.PDF_SERVICE_URL;
-  const pdfServiceKey = process.env.PDF_SERVICE_API_KEY;
-  
-  // Try PDFShift API (most Edge-compatible)
-  if (pdfServiceKey && pdfServiceUrl) {
-    try {
-      const response = await fetch(pdfServiceUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${btoa(`api:${pdfServiceKey}`)}`,
-        },
-        body: JSON.stringify({
-          source: html,
-          format: 'pdf',
-        }),
-      });
-      
-      if (response.ok) {
-        const arrayBuffer = await response.arrayBuffer();
-        return new Uint8Array(arrayBuffer);
-      } else {
-        const errorText = await response.text();
-        console.error('PDF service error:', errorText);
-      }
-    } catch (error) {
-      console.warn('PDF service failed:', error);
-    }
-  }
-  
-  // Fallback: Return HTML as data URL (client can print to PDF)
-  // This allows the app to work without a PDF service configured
-  // The client can use window.print() or a client-side PDF library
-  console.warn('PDF service not configured, returning HTML for client-side conversion');
-  const htmlBase64 = btoa(unescape(encodeURIComponent(html)));
-  const dataUrl = `data:text/html;base64,${htmlBase64}`;
-  
-  // Return a minimal PDF-like response that the client can handle
-  // In practice, the client should convert HTML to PDF using window.print() or jsPDF
-  throw new Error('PDF_SERVICE_NOT_CONFIGURED:' + dataUrl);
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -91,8 +41,8 @@ export async function POST(request: NextRequest) {
       duration_minutes: entry.duration_minutes,
     }));
 
-    // Generate HTML for PDF
-    const html = generateStatementHTML(
+    // Generate PDF directly using pdf-lib (Edge Runtime compatible)
+    const pdfBytes = await generateStatementPDF(
       clientName,
       statementNumber,
       periodStart,
@@ -100,25 +50,6 @@ export async function POST(request: NextRequest) {
       pdfEntries,
       totalMinutes
     );
-
-    // Convert HTML to PDF (Edge Runtime compatible)
-    let pdfBytes: Uint8Array;
-    let isHtmlFallback = false;
-    
-    try {
-      pdfBytes = await htmlToPdf(html);
-    } catch (error: any) {
-      // If PDF service is not configured, return HTML as data URL
-      if (error.message?.startsWith('PDF_SERVICE_NOT_CONFIGURED:')) {
-        const htmlDataUrl = error.message.replace('PDF_SERVICE_NOT_CONFIGURED:', '');
-        return NextResponse.json({ 
-          pdfUrl: htmlDataUrl,
-          isHtml: true,
-          message: 'PDF service niet geconfigureerd. HTML wordt teruggegeven voor client-side conversie.'
-        });
-      }
-      throw error;
-    }
 
     // Upload to Supabase Storage
     const supabase = await createClient();

@@ -177,36 +177,38 @@ export function ExportsView({
       }
 
       const result = await response.json();
-      const { pdfUrl, isHtml } = result;
+      const { pdfUrl } = result;
       
-      if (isHtml) {
-        // PDF service not configured - we can't create a real PDF
-        // But we can still save the HTML and let user print it
-        toast.showError("PDF service niet geconfigureerd. Configureer PDF_SERVICE_URL en PDF_SERVICE_API_KEY voor echte PDF's.");
-        
-        // Optionally: open HTML in new window for printing
-        const base64Content = pdfUrl.replace('data:text/html;base64,', '');
-        const binaryString = atob(base64Content);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+      // PDF is always generated now (using pdf-lib, no HTML fallback)
+      await updateStatementPdfUrl(statement.id, pdfUrl);
+      
+      // Refresh statements list
+      const statementsResponse = await fetch("/api/statements");
+      const newStatements = await statementsResponse.json();
+      setStatements(newStatements);
+      
+      // Automatically download the PDF
+      if (pdfUrl) {
+        if (pdfUrl.startsWith('data:')) {
+          // Base64 data URL - download directly
+          const link = document.createElement('a');
+          link.href = pdfUrl;
+          link.download = `urenstaat_${statement.statement_number}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } else {
+          // URL - download via API route for reliability
+          const link = document.createElement('a');
+          link.href = `/api/pdf/${statement.id}`;
+          link.download = `urenstaat_${statement.statement_number}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
-        const htmlContent = new TextDecoder('utf-8').decode(bytes);
-        
-        const newWindow = window.open();
-        if (newWindow) {
-          newWindow.document.write(htmlContent);
-          newWindow.document.close();
-          toast.showSuccess("HTML geopend - gebruik Ctrl+P (of Cmd+P) om te printen naar PDF.");
-        }
-      } else {
-        await updateStatementPdfUrl(statement.id, pdfUrl);
-        // Refresh statements list
-        const statementsResponse = await fetch("/api/statements");
-        const newStatements = await statementsResponse.json();
-        setStatements(newStatements);
-        toast.showSuccess("PDF gegenereerd! Je kunt het nu downloaden.");
       }
+      
+      toast.showSuccess("PDF gegenereerd en gedownload!");
     } catch (error) {
       alert("Fout bij genereren PDF: " + (error as Error).message);
     } finally {
@@ -519,6 +521,45 @@ export function ExportsView({
                             return;
                           }
 
+                          // Check if PDF exists, if not generate it
+                          let pdfUrl = null;
+                          const existingStatement = statements.find(s => s.id === statement.id);
+                          if (existingStatement?.pdf_url) {
+                            pdfUrl = existingStatement.pdf_url;
+                          } else {
+                            // Generate PDF first
+                            setGenerating(true);
+                            try {
+                              const pdfResponse = await fetch("/api/generate-pdf", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  statementId: statement.id,
+                                  clientName: client.name,
+                                  statementNumber: statement.statement_number,
+                                  periodStart: previewData.period.start,
+                                  periodEnd: previewData.period.end,
+                                  entries: previewData.entries,
+                                }),
+                              });
+
+                              if (!pdfResponse.ok) {
+                                const errorData = await pdfResponse.json();
+                                throw new Error(errorData.error || "PDF generatie mislukt");
+                              }
+
+                              const pdfResult = await pdfResponse.json();
+                              pdfUrl = pdfResult.pdfUrl;
+                              await updateStatementPdfUrl(statement.id, pdfUrl);
+                            } catch (error: any) {
+                              toast.showError("Fout bij genereren PDF: " + error.message);
+                              setGenerating(false);
+                              return;
+                            } finally {
+                              setGenerating(false);
+                            }
+                          }
+
                           // Create statement object for email dialog
                           const statementForEmail: Statement = {
                             id: statement.id,
@@ -526,7 +567,7 @@ export function ExportsView({
                             period_start: previewData.period.start,
                             period_end: previewData.period.end,
                             generated_at: new Date().toISOString(),
-                            pdf_url: null, // Will be generated if needed
+                            pdf_url: pdfUrl,
                             clients: { name: client.name },
                           };
 
@@ -536,7 +577,7 @@ export function ExportsView({
                           const defaultMsg = `Beste,\n\nHierbij de urenstaat voor ${client.name} voor de periode ${periodStart} tot ${periodEnd}.\n\nMet vriendelijke groet`;
                           setCustomMessage(defaultMsg);
                           setEmailAddresses([""]);
-                          setIncludePdf(true);
+                          setIncludePdf(!!pdfUrl);
                           setIncludeCsv(false);
                           setSelectedStatement(statementForEmail);
                           setEmailDialogOpen(true);
@@ -655,19 +696,24 @@ export function ExportsView({
                         <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
                           {statement.pdf_url ? (
                             <>
-                              <MuiLink
-                                href={statement.pdf_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                              <Button
+                                size="small"
+                                startIcon={<Download />}
+                                onClick={() => {
+                                  // Use API route for reliable PDF download
+                                  window.open(`/api/pdf/${statement.id}`, '_blank');
+                                }}
+                                variant="outlined"
+                                sx={{ minWidth: 'auto' }}
                               >
-                                <Download fontSize="small" />
                                 PDF
-                              </MuiLink>
+                              </Button>
                               <IconButton
                                 size="small"
                                 onClick={() => {
-                                  navigator.clipboard.writeText(statement.pdf_url || "");
+                                  // Copy API route URL instead of base64 data URL
+                                  const pdfUrl = `${window.location.origin}/api/pdf/${statement.id}`;
+                                  navigator.clipboard.writeText(pdfUrl);
                                   toast.showSuccess("Link gekopieerd!");
                                 }}
                                 title="Kopieer link"
@@ -889,13 +935,8 @@ export function ExportsView({
                   if (result.fallback) {
                     // Email service not configured - use mailto links
                     const subject = encodeURIComponent(result.emailData.subject);
-                    let bodyText = result.emailData.body;
-                    if (result.emailData.pdfUrl) {
-                      bodyText += `\n\nPDF: ${result.emailData.pdfUrl}`;
-                    }
-                    if (result.emailData.csvUrl) {
-                      bodyText += `\n\nCSV: ${result.emailData.csvUrl}`;
-                    }
+                    // Body already contains attachment links, no need to add them again
+                    const bodyText = result.emailData.body;
                     const body = encodeURIComponent(bodyText);
                     const mailtoLink = `mailto:${parsedEmails.join(",")}?subject=${subject}&body=${body}`;
                     window.location.href = mailtoLink;
