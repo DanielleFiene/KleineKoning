@@ -46,6 +46,7 @@ interface TimerState {
   projectId: string | null;
   description: string;
   sessions: TimerSession[]; // Accumulated sessions
+  lastSaved?: number; // Timestamp when timer was last saved (prevents duplicate saves)
 }
 
 const TIMER_STORAGE_KEY = "kleinekoning_timer";
@@ -127,20 +128,19 @@ export function Timer({
   useEffect(() => {
     if (timerState.isRunning && timerState.startTime) {
       // Calculate elapsed time from startTime (works across tabs)
+      const startTime = timerState.startTime; // Capture startTime in closure
       const updateElapsed = () => {
-        if (timerState.startTime) {
-          const elapsed = Math.floor((Date.now() - timerState.startTime) / 1000);
-          setTimerState((prev) => {
-            // Only update if timer is still running and startTime matches
-            if (prev.isRunning && prev.startTime === timerState.startTime) {
-              return {
-                ...prev,
-                elapsedSeconds: elapsed,
-              };
-            }
-            return prev;
-          });
-        }
+        setTimerState((prev) => {
+          // Only update if timer is still running and startTime matches
+          if (prev.isRunning && prev.startTime === startTime && prev.startTime) {
+            const elapsed = Math.floor((Date.now() - prev.startTime) / 1000);
+            return {
+              ...prev,
+              elapsedSeconds: elapsed,
+            };
+          }
+          return prev;
+        });
       };
       
       // Update immediately
@@ -151,12 +151,14 @@ export function Timer({
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     }
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, [timerState.isRunning, timerState.startTime]);
@@ -203,14 +205,16 @@ export function Timer({
                 const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
                 return {
                   ...parsed,
-                  elapsedSeconds: (parsed.elapsedSeconds || 0) + elapsed,
+                  elapsedSeconds: elapsed, // Calculate from startTime, don't add to old value
                   startTime: parsed.startTime,
                   sessions: parsed.sessions || [],
                 };
               }
               
+              // Timer is stopped, just sync state without updating elapsedSeconds
               return {
                 ...parsed,
+                elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
                 sessions: parsed.sessions || [],
               };
             });
@@ -236,14 +240,16 @@ export function Timer({
                 const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
                 return {
                   ...parsed,
-                  elapsedSeconds: (parsed.elapsedSeconds || 0) + elapsed,
+                  elapsedSeconds: elapsed, // Calculate from startTime, don't add to old value
                   startTime: parsed.startTime,
                   sessions: parsed.sessions || prev.sessions || [],
                 };
               }
               
+              // Timer is stopped, just sync state without updating elapsedSeconds
               return {
                 ...parsed,
+                elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
                 sessions: parsed.sessions || prev.sessions || [],
               };
             });
@@ -284,14 +290,16 @@ export function Timer({
                 const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
                 return {
                   ...parsed,
-                  elapsedSeconds: (parsed.elapsedSeconds || 0) + elapsed,
+                  elapsedSeconds: elapsed, // Calculate from startTime, don't add to old value
                   startTime: parsed.startTime,
                   sessions: parsed.sessions || prev.sessions || [],
                 };
               }
               
+              // Timer is stopped, just sync state without updating elapsedSeconds
               return {
                 ...parsed,
+                elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
                 sessions: parsed.sessions || prev.sessions || [],
               };
             });
@@ -315,6 +323,40 @@ export function Timer({
 
   const handleStop = () => {
     if (!timerState.isRunning) return;
+    
+    // Stop the interval immediately
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Check if timer was already stopped in another tab (prevent duplicate saves)
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // If timer is not running in localStorage, it was already stopped in another tab
+          if (!parsed.isRunning && parsed.lastSaved) {
+            const timeSinceSave = Date.now() - parsed.lastSaved;
+            // If saved within last 5 seconds, don't save again
+            if (timeSinceSave < 5000) {
+              // Just sync the state, don't save
+              setTimerState((prev) => ({
+                ...prev,
+                isRunning: false,
+                startTime: null,
+                elapsedSeconds: 0,
+                sessions: [],
+              }));
+              return;
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    }
     
     if (!timerState.clientId) {
       toast.showWarning("Geen klant geselecteerd");
@@ -354,12 +396,14 @@ export function Timer({
     }
     
     // Reset timer but KEEP client, project, and description for next start
+    const now = Date.now();
     setTimerState((prev) => ({
       ...prev,
       isRunning: false,
       startTime: null,
       elapsedSeconds: 0,
       sessions: [], // Clear accumulated sessions after saving
+      lastSaved: now, // Mark when timer was saved (prevents duplicate saves from other tabs)
     }));
 
     // Always call onStop if we have a client (even if 0 minutes, rounding might make it > 0)
