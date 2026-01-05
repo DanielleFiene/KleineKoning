@@ -464,28 +464,6 @@ export function Timer({
             </Paper>
           )}
 
-          {!timerState.clientId && !timerState.isRunning && (
-            <Button
-              onClick={() => onSetup?.()}
-              variant="outlined"
-              fullWidth
-              startIcon={<Settings />}
-              sx={{
-                borderColor: "secondary.light",
-                "&:hover": {
-                  backgroundColor: "secondary.main",
-                  borderColor: "secondary.main",
-                  color: "white",
-                  "& .MuiSvgIcon-root": {
-                    color: "white",
-                  },
-                },
-              }}
-            >
-              Timer instellen
-            </Button>
-          )}
-
           <Box sx={{ display: "flex", gap: 1 }}>
             {!timerState.isRunning ? (
               <Button
