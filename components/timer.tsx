@@ -77,11 +77,12 @@ export function Timer({
         try {
           const parsed = JSON.parse(saved);
           if (parsed.isRunning && parsed.startTime) {
+            // Keep original startTime and calculate current elapsed time
             const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
             return {
               ...parsed,
-              elapsedSeconds: parsed.elapsedSeconds + elapsed,
-              startTime: Date.now(),
+              elapsedSeconds: elapsed, // Calculate from original startTime
+              startTime: parsed.startTime, // Keep original startTime!
               sessions: parsed.sessions || [],
             };
           }
@@ -110,17 +111,43 @@ export function Timer({
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(timerState));
+      
+      // Broadcast to other tabs using BroadcastChannel (more reliable than storage events)
+      try {
+        const channel = new BroadcastChannel("kleinekoning_timer");
+        channel.postMessage({ type: "timer_update", state: timerState });
+        channel.close();
+      } catch {
+        // BroadcastChannel not supported, fallback to storage event
+        // Storage event is automatically fired when localStorage changes
+      }
     }
   }, [timerState]);
 
   useEffect(() => {
-    if (timerState.isRunning) {
-      intervalRef.current = setInterval(() => {
-        setTimerState((prev) => ({
-          ...prev,
-          elapsedSeconds: prev.elapsedSeconds + 1,
-        }));
-      }, 1000);
+    if (timerState.isRunning && timerState.startTime) {
+      // Calculate elapsed time from startTime (works across tabs)
+      const updateElapsed = () => {
+        if (timerState.startTime) {
+          const elapsed = Math.floor((Date.now() - timerState.startTime) / 1000);
+          setTimerState((prev) => {
+            // Only update if timer is still running and startTime matches
+            if (prev.isRunning && prev.startTime === timerState.startTime) {
+              return {
+                ...prev,
+                elapsedSeconds: elapsed,
+              };
+            }
+            return prev;
+          });
+        }
+      };
+      
+      // Update immediately
+      updateElapsed();
+      
+      // Then update every second
+      intervalRef.current = setInterval(updateElapsed, 1000);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -132,7 +159,7 @@ export function Timer({
         clearInterval(intervalRef.current);
       }
     };
-  }, [timerState.isRunning]);
+  }, [timerState.isRunning, timerState.startTime]);
 
   const handleStart = () => {
     if (!timerState.clientId) {
@@ -151,33 +178,139 @@ export function Timer({
   };
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      if (typeof window !== "undefined") {
+    if (typeof window === "undefined") return;
+
+    // Use BroadcastChannel for cross-tab communication (more reliable)
+    let channel: BroadcastChannel | null = null;
+    let storageInterval: NodeJS.Timeout | null = null;
+
+    try {
+      channel = new BroadcastChannel("kleinekoning_timer");
+      
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data?.type === "timer_update") {
+          const parsed = event.data.state;
+          if (parsed) {
+            // Update state from other tab, but preserve local running state
+            setTimerState((prev) => {
+              // Don't overwrite if timer is running locally (this tab is the active one)
+              if (prev.isRunning && prev.startTime) {
+                return prev;
+              }
+              
+              // If timer was running in other tab, calculate elapsed time
+              if (parsed.isRunning && parsed.startTime) {
+                const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
+                return {
+                  ...parsed,
+                  elapsedSeconds: (parsed.elapsedSeconds || 0) + elapsed,
+                  startTime: parsed.startTime,
+                  sessions: parsed.sessions || [],
+                };
+              }
+              
+              return {
+                ...parsed,
+                sessions: parsed.sessions || [],
+              };
+            });
+          }
+        }
+      };
+
+      channel.addEventListener("message", handleMessage);
+
+      // Fallback: also listen to storage events (for browsers without BroadcastChannel)
+      const handleStorageChange = () => {
         const saved = localStorage.getItem(TIMER_STORAGE_KEY);
         if (saved) {
           try {
             const parsed = JSON.parse(saved);
-            setTimerState((prev) => ({
-              ...prev,
-              clientId: parsed.clientId,
-              projectId: parsed.projectId,
-              description: parsed.description,
-              sessions: parsed.sessions || prev.sessions || [],
-            }));
+            setTimerState((prev) => {
+              // Don't overwrite if timer is running locally
+              if (prev.isRunning && prev.startTime) {
+                return prev;
+              }
+              
+              if (parsed.isRunning && parsed.startTime) {
+                const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
+                return {
+                  ...parsed,
+                  elapsedSeconds: (parsed.elapsedSeconds || 0) + elapsed,
+                  startTime: parsed.startTime,
+                  sessions: parsed.sessions || prev.sessions || [],
+                };
+              }
+              
+              return {
+                ...parsed,
+                sessions: parsed.sessions || prev.sessions || [],
+              };
+            });
           } catch {
             // Ignore
           }
         }
-      }
-    };
+      };
 
-    window.addEventListener("storage", handleStorageChange);
-    const interval = setInterval(handleStorageChange, 1000);
+      window.addEventListener("storage", handleStorageChange);
+      
+      // Poll localStorage as additional fallback (every 2 seconds, less aggressive)
+      storageInterval = setInterval(handleStorageChange, 2000);
 
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      clearInterval(interval);
-    };
+      return () => {
+        if (channel) {
+          channel.removeEventListener("message", handleMessage);
+          channel.close();
+        }
+        window.removeEventListener("storage", handleStorageChange);
+        if (storageInterval) {
+          clearInterval(storageInterval);
+        }
+      };
+    } catch {
+      // BroadcastChannel not supported, use storage events only
+      const handleStorageChange = () => {
+        const saved = localStorage.getItem(TIMER_STORAGE_KEY);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setTimerState((prev) => {
+              if (prev.isRunning && prev.startTime) {
+                return prev;
+              }
+              
+              if (parsed.isRunning && parsed.startTime) {
+                const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
+                return {
+                  ...parsed,
+                  elapsedSeconds: (parsed.elapsedSeconds || 0) + elapsed,
+                  startTime: parsed.startTime,
+                  sessions: parsed.sessions || prev.sessions || [],
+                };
+              }
+              
+              return {
+                ...parsed,
+                sessions: parsed.sessions || prev.sessions || [],
+              };
+            });
+          } catch {
+            // Ignore
+          }
+        }
+      };
+
+      window.addEventListener("storage", handleStorageChange);
+      storageInterval = setInterval(handleStorageChange, 2000);
+
+      return () => {
+        window.removeEventListener("storage", handleStorageChange);
+        if (storageInterval) {
+          clearInterval(storageInterval);
+        }
+      };
+    }
   }, []);
 
   const handleStop = () => {
