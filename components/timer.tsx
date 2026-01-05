@@ -161,7 +161,10 @@ export function Timer({
       updateElapsed();
       
       // Then update every second
-      intervalRef.current = setInterval(updateElapsed, 1000);
+      // Only set interval if we don't already have one (prevent duplicate intervals)
+      if (!intervalRef.current) {
+        intervalRef.current = setInterval(updateElapsed, 1000);
+      }
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -194,6 +197,68 @@ export function Timer({
       ownerTabId: tabId, // Set this tab as the owner
     }));
   };
+
+  // Listen for custom event when timer setup is saved (same tab)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const handleTimerSetupUpdate = () => {
+      const saved = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          console.log("[Timer] Timer setup updated, new data:", parsed);
+          // Always update when timer is not running, or if timer is running but we're not the owner
+          setTimerState((prev) => {
+            // Only skip update if this tab owns a running timer (don't interrupt running timer)
+            if (prev.isRunning && prev.ownerTabId === tabId) {
+              console.log("[Timer] Timer is running and we own it, not updating");
+              return prev; // Don't update if this tab owns a running timer
+            }
+            
+            // Timer is not running OR we're not the owner - safe to update
+            console.log("[Timer] Updating timer state (timer not running or not owner)");
+            
+            // Check if client/project changed - if so, clear sessions
+            const clientChanged = prev.clientId !== parsed.clientId;
+            const projectChanged = prev.projectId !== parsed.projectId;
+            
+            console.log("[Timer] Updating timer state:", {
+              clientChanged,
+              projectChanged,
+              newClientId: parsed.clientId,
+              newProjectId: parsed.projectId,
+              newDescription: parsed.description,
+              currentIsRunning: prev.isRunning,
+            });
+            
+            // Update clientId, projectId, description from localStorage
+            // Always use the new values from localStorage (use nullish coalescing to handle null/undefined, but keep empty strings)
+            // If client or project changed, also clear sessions to prevent mixing old/new data
+            return {
+              ...prev,
+              clientId: parsed.clientId ?? null,
+              projectId: parsed.projectId ?? null,
+              description: parsed.description ?? "",
+              // Clear sessions if client/project changed (prevents old sessions from being saved with new client/project)
+              sessions: (clientChanged || projectChanged) ? [] : (parsed.sessions || prev.sessions || []),
+              // Also reset elapsed time if client/project changed
+              elapsedSeconds: (clientChanged || projectChanged) ? 0 : prev.elapsedSeconds,
+            };
+          });
+        } catch (e) {
+          console.error("[Timer] Error parsing localStorage:", e);
+        }
+      } else {
+        console.log("[Timer] No saved timer data found");
+      }
+    };
+    
+    window.addEventListener("timerSetupUpdated", handleTimerSetupUpdate);
+    return () => {
+      window.removeEventListener("timerSetupUpdated", handleTimerSetupUpdate);
+    };
+  }, [tabId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -229,10 +294,14 @@ export function Timer({
               }
               
               // Timer is stopped, just sync state without updating elapsedSeconds
+              // Also sync clientId, projectId, description when timer is stopped
               return {
                 ...parsed,
                 elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
                 ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
+                clientId: parsed.clientId || null, // Sync clientId
+                projectId: parsed.projectId || null, // Sync projectId
+                description: parsed.description || "", // Sync description
                 sessions: parsed.sessions || [],
               };
             });
@@ -266,10 +335,14 @@ export function Timer({
               }
               
               // Timer is stopped, just sync state without updating elapsedSeconds
+              // Also sync clientId, projectId, description when timer is stopped
               return {
                 ...parsed,
                 elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
                 ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
+                clientId: parsed.clientId || null, // Sync clientId
+                projectId: parsed.projectId || null, // Sync projectId
+                description: parsed.description || "", // Sync description
                 sessions: parsed.sessions || prev.sessions || [],
               };
             });
@@ -319,10 +392,14 @@ export function Timer({
               }
               
               // Timer is stopped, just sync state without updating elapsedSeconds
+              // Also sync clientId, projectId, description when timer is stopped
               return {
                 ...parsed,
                 elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
                 ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
+                clientId: parsed.clientId || null, // Sync clientId
+                projectId: parsed.projectId || null, // Sync projectId
+                description: parsed.description || "", // Sync description
                 sessions: parsed.sessions || prev.sessions || [],
               };
             });
@@ -394,10 +471,12 @@ export function Timer({
       intervalRef.current = null;
     }
     
-    // Also set isRunning to false immediately to prevent interval from restarting
+    // Also set isRunning to false and startTime to null immediately to prevent interval from restarting
+    // This must be done in one update to prevent the useEffect from restarting the interval
     setTimerState((prev) => ({
       ...prev,
       isRunning: false, // Stop immediately
+      startTime: null, // Clear startTime to prevent interval from restarting
     }));
     
     if (!timerState.clientId) {
@@ -421,8 +500,16 @@ export function Timer({
     const day = String(startDate.getDate()).padStart(2, "0");
     const entryDate = `${year}-${month}-${day}`;
     
-    // Combine all sessions including current one
-    const allSessions = [...(timerState.sessions || [])];
+    // Filter sessions to only include those for the current client/project
+    // This prevents old sessions from being saved when client/project was changed
+    const currentClientId = timerState.clientId;
+    const currentProjectId = timerState.projectId || "algemeen";
+    const relevantSessions = (timerState.sessions || []).filter(
+      (s) => s.clientId === currentClientId && s.projectId === currentProjectId
+    );
+    
+    // Combine filtered sessions with current one
+    const allSessions = [...relevantSessions];
     
     // Always add current session if timer was running (even if 0 minutes, for rounding)
     if (timerState.clientId) {

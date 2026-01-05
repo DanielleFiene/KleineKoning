@@ -28,6 +28,7 @@ import {
   FormControl,
   InputLabel,
   Table,
+  useTheme,
   TableBody,
   TableCell,
   TableContainer,
@@ -75,6 +76,7 @@ export function TimeEntriesView({
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
+  const theme = useTheme();
   const [entries, setEntries] = useState<TimeEntry[]>(initialEntries);
   const [filterClient, setFilterClient] = useState<string>("all");
   const [filterProject, setFilterProject] = useState<string>("all");
@@ -585,10 +587,9 @@ export function TimeEntriesView({
           const parsed = JSON.parse(currentTimer);
           const isRunning = parsed.isRunning && parsed.startTime;
           const isChanging = parsed.clientId !== data.clientId || 
-                            parsed.projectId !== data.projectId || 
-                            parsed.description !== data.description;
+                            parsed.projectId !== data.projectId;
           
-          // If timer is running and project/description is changing, accumulate current time
+          // If timer is running and client/project is changing, accumulate current time
           if (isRunning && isChanging) {
             const currentElapsed = parsed.startTime 
               ? Math.floor((Date.now() - parsed.startTime) / 1000)
@@ -602,7 +603,16 @@ export function TimeEntriesView({
                 clientId: parsed.clientId,
                 projectId: parsed.projectId,
                 description: parsed.description,
-                timestamp: Date.now(),
+                timestamp: parsed.startTime || Date.now(),
+                date: parsed.startTime 
+                  ? (() => {
+                      const d = new Date(parsed.startTime);
+                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                    })()
+                  : (() => {
+                      const d = new Date();
+                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                    })(),
               };
               
               updated = {
@@ -615,16 +625,29 @@ export function TimeEntriesView({
                 description: data.description,
               };
             } else {
-              // Just update the fields
+              // Just update the fields and reset timer
               updated = {
                 ...parsed,
+                elapsedSeconds: 0,
+                startTime: Date.now(), // Reset timer for new client/project
                 clientId: data.clientId,
                 projectId: data.projectId,
                 description: data.description,
               };
             }
+          } else if (!isRunning && isChanging) {
+            // Timer is stopped and client/project is changing - clear sessions and reset
+            updated = {
+              ...parsed,
+              elapsedSeconds: 0,
+              startTime: null,
+              clientId: data.clientId,
+              projectId: data.projectId,
+              description: data.description,
+              sessions: [], // Clear sessions when changing client/project while stopped
+            };
           } else {
-            // Just update the fields
+            // Just update the fields (description only or no change)
             updated = {
               ...parsed,
               clientId: data.clientId,
@@ -656,6 +679,8 @@ export function TimeEntriesView({
       }
       localStorage.setItem("kleinekoning_timer", JSON.stringify(updated));
       window.dispatchEvent(new Event("storage"));
+      // Also dispatch custom event for same-tab updates
+      window.dispatchEvent(new Event("timerSetupUpdated"));
     }
     setTimerSetupOpen(false);
   };
@@ -1462,7 +1487,7 @@ export function TimeEntriesView({
                 <Box sx={{ px: 3, py: 2 }}>
                   <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 2 }}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                      {dayEntries.length > 0 && (
+                      {dayEntries.length > 0 && !isToday && (
                         <Checkbox
                           checked={dayEntries.length > 0 && dayEntries.every((e: TimeEntry) => selectedEntries.has(e.id))}
                           indeterminate={dayEntries.some((e: TimeEntry) => selectedEntries.has(e.id)) && !dayEntries.every((e: TimeEntry) => selectedEntries.has(e.id))}
@@ -1490,7 +1515,7 @@ export function TimeEntriesView({
                         sx={{
                           fontWeight: "bold",
                           textTransform: "capitalize",
-                          color: isToday ? "primary.dark" : "text.primary",
+                          color: isToday ? (theme.palette.mode === "dark" ? "text.primary" : "primary.dark") : "text.primary",
                         }}
                       >
                         {format(day, "EEEE d MMMM", { locale: nl })}
@@ -1555,7 +1580,7 @@ export function TimeEntriesView({
                             <TableCell align="right" sx={{ fontWeight: "bold" }}>
                               Duur
                             </TableCell>
-                            <TableCell width={60}></TableCell>
+                            <TableCell width={60} sx={{ fontWeight: "bold" }}>Acties</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>

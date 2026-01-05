@@ -54,34 +54,110 @@ export function TimerSetupDialog({
         try {
           const parsed = JSON.parse(saved);
           if (parsed.clientId) setSelectedClient(parsed.clientId);
-          if (parsed.projectId) setSelectedProject(parsed.projectId);
+          // Don't set projectId here - wait until projects are loaded
+          // It will be set in the projects loading effect if valid
           if (parsed.description) setDescription(parsed.description);
         } catch {
           // Ignore
         }
       }
+    } else {
+      // Reset when dialog closes
+      setSelectedClient("");
+      setSelectedProject("");
+      setDescription("");
+      setProjects([]);
     }
   }, [open]);
 
   useEffect(() => {
     if (selectedClient) {
+      console.log("[TimerSetupDialog] Fetching projects for client:", selectedClient);
       fetch(`/api/projects?client_id=${selectedClient}`)
-        .then((res) => res.json())
+        .then(async (res) => {
+          console.log("[TimerSetupDialog] Response status:", res.status, res.ok);
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            console.error("[TimerSetupDialog] HTTP error:", errorData);
+            throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
         .then((data) => {
-          // Check if "Algemeen" project exists, if not add it as an option
-          const hasAlgemeen = data.some((p: any) => p.name === "Algemeen");
+          console.log("[TimerSetupDialog] Received data:", data);
+          
+          // Handle error response from API
+          if (data && data.error) {
+            console.error("[TimerSetupDialog] API error:", data.error);
+            // Even on error, show "Algemeen" as option
+            setProjects([{ id: "algemeen", name: "Algemeen", client_id: selectedClient }]);
+            return;
+          }
+          
+          // Ensure data is an array
+          if (!Array.isArray(data)) {
+            console.error("[TimerSetupDialog] Invalid response format (not an array):", data);
+            // Even on invalid response, show "Algemeen" as option
+            setProjects([{ id: "algemeen", name: "Algemeen", client_id: selectedClient }]);
+            return;
+          }
+          
+          console.log("[TimerSetupDialog] Projects array length:", data.length);
+          
+          // Check if "Algemeen" project exists (by name or by id)
+          const hasAlgemeen = data.some((p: any) => p.name === "Algemeen" || p.id === "algemeen");
+          let finalProjects: any[];
           if (!hasAlgemeen) {
             // Add "Algemeen" as a virtual option (will be created when needed)
-            setProjects([{ id: "algemeen", name: "Algemeen", client_id: selectedClient }, ...data]);
+            // Add it to the array so it appears in the dropdown
+            finalProjects = [{ id: "algemeen", name: "Algemeen", client_id: selectedClient }, ...data];
           } else {
-            setProjects(data);
+            // "Algemeen" already exists in database, just use the data as-is
+            // Filter out any duplicate entries (by id) to be safe
+            // This removes duplicates while keeping all unique projects
+            finalProjects = data.filter((p: any, index: number, self: any[]) => 
+              index === self.findIndex((p2: any) => p2.id === p.id)
+            );
+          }
+          
+          console.log("[TimerSetupDialog] Final projects:", finalProjects);
+          setProjects(finalProjects);
+          
+          // Now validate and set selectedProject from localStorage if it exists in the loaded projects
+          if (typeof window !== "undefined") {
+            const saved = localStorage.getItem("kleinekoning_timer");
+            if (saved) {
+              try {
+                const parsed = JSON.parse(saved);
+                // Only set projectId if it matches the selected client and exists in the projects list
+                if (parsed.clientId === selectedClient && parsed.projectId) {
+                  const projectExists = finalProjects.some((p: any) => p.id === parsed.projectId);
+                  if (projectExists) {
+                    console.log("[TimerSetupDialog] Setting selectedProject from localStorage:", parsed.projectId);
+                    setSelectedProject(parsed.projectId);
+                  } else {
+                    // Project doesn't exist or doesn't belong to this client, reset it
+                    console.log("[TimerSetupDialog] Project from localStorage not found, resetting");
+                    setSelectedProject("");
+                  }
+                } else {
+                  // Client changed or no projectId, reset it
+                  console.log("[TimerSetupDialog] Client changed or no projectId, resetting");
+                  setSelectedProject("");
+                }
+              } catch (e) {
+                console.error("[TimerSetupDialog] Error parsing localStorage:", e);
+              }
+            }
           }
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error("[TimerSetupDialog] Error fetching projects:", error);
           // Even on error, show "Algemeen" as option
           setProjects([{ id: "algemeen", name: "Algemeen", client_id: selectedClient }]);
         });
     } else {
+      console.log("[TimerSetupDialog] No client selected, clearing projects");
       setProjects([]);
       setSelectedProject("");
     }
@@ -133,21 +209,27 @@ export function TimerSetupDialog({
             <Select
               labelId="timer-project-label"
               id="timer-project"
-              value={selectedProject}
+              value={selectedProject || ""}
               label="Project"
-              onChange={(e) => setSelectedProject(e.target.value)}
+              onChange={(e) => {
+                console.log("[TimerSetupDialog] Project selected:", e.target.value);
+                setSelectedProject(e.target.value);
+              }}
             >
-              {/* Only show hardcoded "Algemeen" if it doesn't already exist in projects */}
-              {!projects.some((p) => p.id === "algemeen" || p.name === "Algemeen") && (
-                <MenuItem value="algemeen">
-                  Algemeen
+              {projects.length === 0 ? (
+                <MenuItem value="" disabled>
+                  Geen projecten beschikbaar
                 </MenuItem>
+              ) : (
+                projects.map((project) => {
+                  console.log("[TimerSetupDialog] Rendering project:", project.id, project.name);
+                  return (
+                    <MenuItem key={project.id} value={project.id}>
+                      {project.name}
+                    </MenuItem>
+                  );
+                })
               )}
-              {projects.map((project) => (
-                <MenuItem key={project.id} value={project.id}>
-                  {project.name}
-                </MenuItem>
-              ))}
             </Select>
           </FormControl>
 
