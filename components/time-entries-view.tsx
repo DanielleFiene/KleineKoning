@@ -1549,6 +1549,7 @@ export function TimeEntriesView({
                                 size="small"
                               />
                             </TableCell>
+                            <TableCell sx={{ fontWeight: "bold" }}>Klant</TableCell>
                             <TableCell sx={{ fontWeight: "bold" }}>Project</TableCell>
                             <TableCell sx={{ fontWeight: "bold" }}>Omschrijving</TableCell>
                             <TableCell align="right" sx={{ fontWeight: "bold" }}>
@@ -1566,6 +1567,11 @@ export function TimeEntriesView({
                                   onChange={() => handleSelectEntry(entry.id)}
                                   size="small"
                                 />
+                              </TableCell>
+                              <TableCell>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {entry.clients?.name || "-"}
+                                </Typography>
                               </TableCell>
                               <TableCell>
                                 <Chip
