@@ -80,7 +80,7 @@ export function Timer({
   }) => void;
   onSetup?: () => void;
   clients: Array<{ id: string; name: string }>;
-  projects: Array<{ id: string; name: string }>;
+  projects: Array<{ id: string; name: string; client_id?: string }>;
 }) {
   const toast = useToast();
   const tabId = typeof window !== "undefined" ? getTabId() : "";
@@ -525,7 +525,11 @@ export function Timer({
   };
 
   const selectedClient = clients.find((c) => c.id === timerState.clientId);
-  const selectedProject = projects.find((p) => p.id === timerState.projectId);
+  // Handle "algemeen" project - find the "Algemeen" project for the selected client
+  // If projectId is "algemeen", show "Algemeen" as the project name
+  const selectedProject = timerState.projectId === "algemeen" 
+    ? (timerState.clientId ? { id: "algemeen", name: "Algemeen" } : null)
+    : projects.find((p) => p.id === timerState.projectId);
 
   return (
     <Paper elevation={1} sx={{ overflow: "hidden" }}>
