@@ -16,7 +16,6 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { InfoIcon } from "@/components/info-icon";
-import { addClient, updateClient } from "@/app/actions/clients";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/toast-provider";
 
@@ -74,18 +73,35 @@ export function ClientForm({ client }: ClientFormProps) {
 
   async function formAction(formData: FormData) {
     try {
-      // Override with selected profile values
-      formData.set("btw_label", selectedProfile.label);
-      formData.set("btw_percentage", selectedProfile.percentage.toString());
-      formData.set("btw_rule", selectedProfile.rule);
+      const name = formData.get("name") as string;
+      const rateExBtw = formData.get("rate_ex_btw") as string;
 
-      if (isEdit && client) {
-        await updateClient(client.id, formData);
-        toast.showSuccess("Klant bijgewerkt");
-      } else {
-        await addClient(formData);
-        toast.showSuccess("Klant aangemaakt");
+      const body = {
+        name,
+        btw_label: selectedProfile.label,
+        btw_percentage: selectedProfile.percentage,
+        btw_rule: selectedProfile.rule,
+        rate_ex_btw: rateExBtw || null,
+      };
+
+      const url = isEdit && client 
+        ? `/api/clients/${client.id}`
+        : "/api/clients";
+      
+      const method = isEdit ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Opslaan mislukt");
       }
+
+      toast.showSuccess(isEdit ? "Klant bijgewerkt" : "Klant aangemaakt");
       router.push("/clients");
       router.refresh();
     } catch (error) {

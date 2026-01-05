@@ -83,7 +83,11 @@ export async function POST(req: NextRequest) {
         date,
         description,
         duration_minutes: durationMinutes,
-      }).select().single();
+      }).select(`
+        *,
+        clients(name, id),
+        projects(name, rounding_rule, id)
+      `).single();
 
       if (error) {
         throw error;

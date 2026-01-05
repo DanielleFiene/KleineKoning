@@ -249,13 +249,54 @@ export function TimeEntriesView({
         throw new Error(err.error || "Opslaan mislukt");
       }
       
+      const responseData = await res.json();
+      const newEntry = responseData.entry;
+      
       setDescription("");
       setDurationValue("");
       setSelectedProject("");
       setEntryModalOpen(false);
       
-      toast.showSuccess("Tijdentry opgeslagen");
-      router.refresh();
+      // Check if the saved date is in the current week
+      const savedDate = parseDateString(date);
+      const savedDateWeekStart = startOfWeek(savedDate, { weekStartsOn: 1 });
+      const isInCurrentWeek = isSameWeek(savedDateWeekStart, currentWeek, { weekStartsOn: 1 });
+      
+      if (isInCurrentWeek) {
+        // Entry is in current week: add it locally to avoid refresh
+        // The API response already includes clients and projects relations
+        const entryWithRelations: TimeEntry = {
+          ...newEntry,
+          clients: newEntry.clients || { name: "" },
+          projects: newEntry.projects || { name: "", rounding_rule: "none" },
+        };
+        
+        // Add new entry to the list (sorted by date, then created_at)
+        setEntries((prevEntries) => {
+          const updated = [...prevEntries, entryWithRelations];
+          // Sort by date descending, then by created_at descending
+          return updated.sort((a, b) => {
+            if (a.date !== b.date) {
+              return b.date.localeCompare(a.date);
+            }
+            return (b as any).created_at?.localeCompare((a as any).created_at) || 0;
+          });
+        });
+        
+        toast.showSuccess("Tijdentry opgeslagen");
+      } else {
+        // Entry is in different week: navigate to that week
+        const params = new URLSearchParams();
+        const year = savedDateWeekStart.getFullYear();
+        const month = String(savedDateWeekStart.getMonth() + 1).padStart(2, "0");
+        const day = String(savedDateWeekStart.getDate()).padStart(2, "0");
+        params.set("week", `${year}-${month}-${day}`);
+        if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
+        if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
+        router.push(`/time?${params.toString()}`);
+        
+        toast.showSuccess("Tijdentry opgeslagen");
+      }
     } catch (error) {
       toast.showError("Fout: " + (error as Error).message);
     } finally {
@@ -1731,7 +1772,7 @@ export function TimeEntriesView({
                 elevation={0}
                 sx={{
                   p: 2,
-                  backgroundColor: "grey.100",
+                  backgroundColor: (theme) => theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.05)" : "grey.100",
                   border: "1px solid",
                   borderColor: "divider",
                 }}
