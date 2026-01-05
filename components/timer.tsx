@@ -47,9 +47,22 @@ interface TimerState {
   description: string;
   sessions: TimerSession[]; // Accumulated sessions
   lastSaved?: number; // Timestamp when timer was last saved (prevents duplicate saves)
+  ownerTabId?: string; // ID of the tab that owns/started the timer
 }
 
 const TIMER_STORAGE_KEY = "kleinekoning_timer";
+const TAB_ID_KEY = "kleinekoning_tab_id";
+
+// Generate or retrieve unique tab ID
+const getTabId = (): string => {
+  if (typeof window === "undefined") return "";
+  let tabId = sessionStorage.getItem(TAB_ID_KEY);
+  if (!tabId) {
+    tabId = `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    sessionStorage.setItem(TAB_ID_KEY, tabId);
+  }
+  return tabId;
+};
 
 export function Timer({
   onStop,
@@ -70,6 +83,7 @@ export function Timer({
   projects: Array<{ id: string; name: string }>;
 }) {
   const toast = useToast();
+  const tabId = typeof window !== "undefined" ? getTabId() : "";
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [timerState, setTimerState] = useState<TimerState>(() => {
     if (typeof window !== "undefined") {
@@ -172,10 +186,12 @@ export function Timer({
       return;
     }
     // Project is optioneel - "Algemeen" is altijd beschikbaar
+    // This tab becomes the owner of the timer
     setTimerState((prev) => ({
       ...prev,
       isRunning: true,
       startTime: Date.now(),
+      ownerTabId: tabId, // Set this tab as the owner
     }));
   };
 
@@ -195,8 +211,8 @@ export function Timer({
           if (parsed) {
             // Update state from other tab, but preserve local running state
             setTimerState((prev) => {
-              // Don't overwrite if timer is running locally (this tab is the active one)
-              if (prev.isRunning && prev.startTime) {
+              // Don't overwrite if this tab is the owner and timer is running
+              if (prev.isRunning && prev.ownerTabId === tabId) {
                 return prev;
               }
               
@@ -207,6 +223,7 @@ export function Timer({
                   ...parsed,
                   elapsedSeconds: elapsed, // Calculate from startTime, don't add to old value
                   startTime: parsed.startTime,
+                  ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
                   sessions: parsed.sessions || [],
                 };
               }
@@ -215,6 +232,7 @@ export function Timer({
               return {
                 ...parsed,
                 elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
+                ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
                 sessions: parsed.sessions || [],
               };
             });
@@ -231,8 +249,8 @@ export function Timer({
           try {
             const parsed = JSON.parse(saved);
             setTimerState((prev) => {
-              // Don't overwrite if timer is running locally
-              if (prev.isRunning && prev.startTime) {
+              // Don't overwrite if this tab is the owner and timer is running
+              if (prev.isRunning && prev.ownerTabId === tabId) {
                 return prev;
               }
               
@@ -242,6 +260,7 @@ export function Timer({
                   ...parsed,
                   elapsedSeconds: elapsed, // Calculate from startTime, don't add to old value
                   startTime: parsed.startTime,
+                  ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
                   sessions: parsed.sessions || prev.sessions || [],
                 };
               }
@@ -250,6 +269,7 @@ export function Timer({
               return {
                 ...parsed,
                 elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
+                ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
                 sessions: parsed.sessions || prev.sessions || [],
               };
             });
@@ -282,7 +302,8 @@ export function Timer({
           try {
             const parsed = JSON.parse(saved);
             setTimerState((prev) => {
-              if (prev.isRunning && prev.startTime) {
+              // Don't overwrite if this tab is the owner and timer is running
+              if (prev.isRunning && prev.ownerTabId === tabId) {
                 return prev;
               }
               
@@ -292,6 +313,7 @@ export function Timer({
                   ...parsed,
                   elapsedSeconds: elapsed, // Calculate from startTime, don't add to old value
                   startTime: parsed.startTime,
+                  ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
                   sessions: parsed.sessions || prev.sessions || [],
                 };
               }
@@ -300,6 +322,7 @@ export function Timer({
               return {
                 ...parsed,
                 elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
+                ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
                 sessions: parsed.sessions || prev.sessions || [],
               };
             });
@@ -319,24 +342,25 @@ export function Timer({
         }
       };
     }
-  }, []);
+  }, [tabId]);
 
   const handleStop = () => {
     if (!timerState.isRunning) return;
     
-    // Stop the interval immediately
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    // CRITICAL: Only the owner tab can stop the timer
+    // Check both current state and localStorage to prevent race conditions
+    if (timerState.ownerTabId && timerState.ownerTabId !== tabId) {
+      toast.showWarning("Alleen de tab waar de timer is gestart kan deze stoppen");
+      return;
     }
     
-    // Check if timer was already stopped in another tab (prevent duplicate saves)
+    // Double-check in localStorage (prevent race conditions)
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(TIMER_STORAGE_KEY);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // If timer is not running in localStorage, it was already stopped in another tab
+          // If timer is not running, it was already stopped
           if (!parsed.isRunning && parsed.lastSaved) {
             const timeSinceSave = Date.now() - parsed.lastSaved;
             // If saved within last 5 seconds, don't save again
@@ -348,14 +372,26 @@ export function Timer({
                 startTime: null,
                 elapsedSeconds: 0,
                 sessions: [],
+                ownerTabId: undefined,
               }));
               return;
             }
+          }
+          // CRITICAL: If ownerTabId exists and doesn't match this tab, block stop
+          if (parsed.isRunning && parsed.ownerTabId && parsed.ownerTabId !== tabId) {
+            toast.showWarning("Alleen de tab waar de timer is gestart kan deze stoppen");
+            return;
           }
         } catch {
           // Ignore parse errors
         }
       }
+    }
+    
+    // Stop the interval immediately
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
     
     if (!timerState.clientId) {
@@ -404,6 +440,7 @@ export function Timer({
       elapsedSeconds: 0,
       sessions: [], // Clear accumulated sessions after saving
       lastSaved: now, // Mark when timer was saved (prevents duplicate saves from other tabs)
+      ownerTabId: undefined, // Clear ownership when stopped
     }));
 
     // Always call onStop if we have a client (even if 0 minutes, rounding might make it > 0)
@@ -663,6 +700,7 @@ export function Timer({
                 onClick={handleStop}
                 variant="contained"
                 fullWidth
+                disabled={!!(timerState.isRunning && timerState.ownerTabId && timerState.ownerTabId !== tabId)}
                 startIcon={<Square size={18} />}
                 sx={{
                   background: "linear-gradient(90deg, #ef4444 0%, #e11d48 100%)",
