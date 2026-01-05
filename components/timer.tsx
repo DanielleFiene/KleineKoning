@@ -15,6 +15,11 @@ import {
   Button,
   IconButton,
   Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import {
   Play,
@@ -64,6 +69,7 @@ export function Timer({
   projects: Array<{ id: string; name: string }>;
 }) {
   const toast = useToast();
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [timerState, setTimerState] = useState<TimerState>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(TIMER_STORAGE_KEY);
@@ -251,6 +257,20 @@ export function Timer({
   };
 
   const handleReset = () => {
+    // Check if reset is dangerous (timer running or has time/sessions)
+    const hasActiveTime = timerState.isRunning || timerState.elapsedSeconds > 0;
+    const hasSessions = timerState.sessions && timerState.sessions.length > 0;
+    
+    if (hasActiveTime || hasSessions) {
+      // Show confirmation dialog
+      setResetConfirmOpen(true);
+    } else {
+      // Safe to reset immediately if no active time or sessions
+      performReset();
+    }
+  };
+
+  const performReset = () => {
     setTimerState({
       isRunning: false,
       startTime: null,
@@ -263,6 +283,8 @@ export function Timer({
     if (typeof window !== "undefined") {
       localStorage.removeItem(TIMER_STORAGE_KEY);
     }
+    setResetConfirmOpen(false);
+    toast.showSuccess("Timer gereset");
   };
 
   const formatTime = (seconds: number) => {
@@ -510,6 +532,64 @@ export function Timer({
           </Box>
         </Box>
       </Box>
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog
+        open={resetConfirmOpen}
+        onClose={() => setResetConfirmOpen(false)}
+        aria-labelledby="reset-dialog-title"
+        aria-describedby="reset-dialog-description"
+      >
+        <DialogTitle id="reset-dialog-title">
+          Timer resetten?
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="reset-dialog-description">
+            {timerState.isRunning ? (
+              <>
+                De timer loopt nog. Als je reset, verlies je:
+                <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                  <li>Alle getimede tijd ({formatTime(timerState.elapsedSeconds)})</li>
+                  {timerState.sessions && timerState.sessions.length > 0 && (
+                    <li>Alle opgebouwde sessions ({timerState.sessions.length})</li>
+                  )}
+                  <li>Je instellingen (klant, project, omschrijving)</li>
+                </ul>
+                <strong style={{ marginTop: 8, display: "block" }}>
+                  Klik eerst op "Stop" om de tijd op te slaan!
+                </strong>
+              </>
+            ) : (
+              <>
+                Als je reset, verlies je:
+                <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                  <li>Alle getimede tijd ({formatTime(timerState.elapsedSeconds)})</li>
+                  {timerState.sessions && timerState.sessions.length > 0 && (
+                    <li>Alle opgebouwde sessions ({timerState.sessions.length})</li>
+                  )}
+                  <li>Je instellingen (klant, project, omschrijving)</li>
+                </ul>
+                <strong style={{ marginTop: 8, display: "block" }}>
+                  Weet je zeker dat je alles wilt wissen?
+                </strong>
+              </>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResetConfirmOpen(false)} color="primary">
+            Annuleren
+          </Button>
+          <Button
+            onClick={performReset}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Resetten
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }
