@@ -764,7 +764,7 @@ export function TimeEntriesView({
               body: JSON.stringify({
                 client_id: clientId,
                 project_id: projectId,
-                date: key,
+                date: entryDate,
                 description: sessions[sessions.length - 1].description || "",
                 duration_value: roundedMinutes,
                 duration_unit: "minutes",
