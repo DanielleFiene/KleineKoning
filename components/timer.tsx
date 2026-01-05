@@ -577,14 +577,17 @@ export function Timer({
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setResetConfirmOpen(false)} color="primary">
+          <Button 
+            onClick={() => setResetConfirmOpen(false)} 
+            color="primary"
+            autoFocus
+          >
             Annuleren
           </Button>
           <Button
             onClick={performReset}
             color="error"
             variant="contained"
-            autoFocus
           >
             Resetten
           </Button>
