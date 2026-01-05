@@ -542,7 +542,12 @@ export function TimeEntriesView({
 
   const getProjectRoundingRule = (projectId: string) => {
     const project = allProjects.find((p) => p.id === projectId);
-    return (project?.rounding_rule as "none" | "nearest15" | "up15" | "down15") || "none";
+    const rule = (project?.rounding_rule as "none" | "nearest15" | "up15" | "down15" | "up1") || "none";
+    // Special case: "Algemeen" projects should use "up1" (round up to nearest minute)
+    if (project?.name === "Algemeen" && rule === "none") {
+      return "up1";
+    }
+    return rule;
   };
 
   const getProjectDefaultUnit = (projectId: string) => {
@@ -550,10 +555,12 @@ export function TimeEntriesView({
     return (project?.default_unit as "minutes" | "quarter" | "hour" | "day") || "minutes";
   };
 
-  const applyRounding = (minutes: number, rule: "none" | "nearest15" | "up15" | "down15"): number => {
+  const applyRounding = (minutes: number, rule: "none" | "nearest15" | "up15" | "down15" | "up1"): number => {
     switch (rule) {
       case "none":
         return minutes;
+      case "up1":
+        return Math.ceil(minutes); // Round up to nearest minute
       case "nearest15":
         return Math.round(minutes / 15) * 15;
       case "up15":
@@ -701,7 +708,7 @@ export function TimeEntriesView({
                   client_id: clientId,
                   name: "Algemeen",
                   default_unit: "minutes",
-                  rounding_rule: "none",
+                  rounding_rule: "up1",
                 }),
               });
 

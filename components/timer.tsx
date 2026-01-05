@@ -388,11 +388,17 @@ export function Timer({
       }
     }
     
-    // Stop the interval immediately
+    // CRITICAL: Stop the interval FIRST before any state updates
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    
+    // Also set isRunning to false immediately to prevent interval from restarting
+    setTimerState((prev) => ({
+      ...prev,
+      isRunning: false, // Stop immediately
+    }));
     
     if (!timerState.clientId) {
       toast.showWarning("Geen klant geselecteerd");
@@ -400,10 +406,9 @@ export function Timer({
     }
     
     // Calculate current session time
-    const currentElapsed = timerState.startTime 
-      ? Math.floor((Date.now() - timerState.startTime) / 1000)
-      : 0;
-    const currentMinutes = Math.floor((timerState.elapsedSeconds + currentElapsed) / 60);
+    // elapsedSeconds already contains the full elapsed time (updated by interval)
+    // No need to add currentElapsed - that would double-count
+    const currentMinutes = Math.floor(timerState.elapsedSeconds / 60);
     
     // Get the date when timer started (use startTime to determine correct date)
     const startDate = timerState.startTime 
@@ -431,20 +436,26 @@ export function Timer({
       });
     }
     
+    // Save original values before updating state
+    const originalClientId = timerState.clientId;
+    const originalProjectId = timerState.projectId;
+    const originalDescription = timerState.description;
+    
     // Reset timer but KEEP client, project, and description for next start
     const now = Date.now();
     setTimerState((prev) => ({
       ...prev,
-      isRunning: false,
+      isRunning: false, // Already set above, but ensure it's false
       startTime: null,
       elapsedSeconds: 0,
+      // KEEP clientId, projectId, description - user can start again with same settings
       sessions: [], // Clear accumulated sessions after saving
       lastSaved: now, // Mark when timer was saved (prevents duplicate saves from other tabs)
       ownerTabId: undefined, // Clear ownership when stopped
     }));
 
-    // Always call onStop if we have a client (even if 0 minutes, rounding might make it > 0)
-    if (timerState.clientId && allSessions.length > 0) {
+    // Always call onStop if we have sessions to save (even if 0 minutes, rounding might make it > 0)
+    if (originalClientId && allSessions.length > 0) {
       // For now, combine all sessions into one entry
       const totalMinutes = allSessions.reduce((sum, s) => sum + s.durationMinutes, 0);
       const lastSession = allSessions[allSessions.length - 1];
@@ -457,13 +468,13 @@ export function Timer({
         sessions: allSessions, // Pass all sessions with dates
         startDate: entryDate, // Pass the date when timer started
       });
-    } else if (timerState.clientId) {
+    } else if (originalClientId) {
       // Fallback: if no sessions but we have a client, still try to save
       onStop({
         durationMinutes: currentMinutes,
-        clientId: timerState.clientId,
-        projectId: timerState.projectId || "algemeen",
-        description: timerState.description,
+        clientId: originalClientId,
+        projectId: originalProjectId || "algemeen",
+        description: originalDescription,
         sessions: [],
         startDate: entryDate,
       });
@@ -493,6 +504,7 @@ export function Timer({
       projectId: null,
       description: "",
       sessions: [],
+      ownerTabId: undefined,
     });
     if (typeof window !== "undefined") {
       localStorage.removeItem(TIMER_STORAGE_KEY);
@@ -591,7 +603,8 @@ export function Timer({
             )}
           </Box>
 
-          {selectedClient && selectedProject && (
+          {/* Always show timer setup info if client/project/description is set */}
+          {(selectedClient || selectedProject || timerState.description) && (
             <Paper
               elevation={0}
               onClick={() => !timerState.isRunning && onSetup?.()}
@@ -612,30 +625,29 @@ export function Timer({
               }}
             >
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
-                    Klant:
-                  </Typography>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                {selectedClient && (
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
+                      Klant:
+                    </Typography>
                     <Typography variant="body2" sx={{ fontWeight: "bold", color: "secondary.main" }}>
                       {selectedClient.name}
                     </Typography>
-                    {!timerState.isRunning && (
-                      <Settings size={18} style={{ color: "inherit" }} />
-                    )}
                   </Box>
-                </Box>
-                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
-                    Project:
-                  </Typography>
-                  <Typography variant="body2" sx={{ fontWeight: "bold", color: "secondary.main" }}>
-                    {selectedProject.name}
-                  </Typography>
-                </Box>
+                )}
+                {selectedProject && (
+                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
+                      Project:
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: "bold", color: "secondary.main" }}>
+                      {selectedProject.name}
+                    </Typography>
+                  </Box>
+                )}
                 {timerState.description && (
                   <>
-                    <Divider sx={{ my: 0.5 }} />
+                    {(selectedClient || selectedProject) && <Divider sx={{ my: 0.5 }} />}
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontWeight: "medium" }}>
                         Omschrijving:
