@@ -544,37 +544,41 @@ export function Timer({
           Timer resetten?
         </DialogTitle>
         <DialogContent>
-          <DialogContentText id="reset-dialog-description">
+          <Box id="reset-dialog-description">
             {timerState.isRunning ? (
               <>
-                De timer loopt nog. Als je reset, verlies je:
-                <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                <DialogContentText>
+                  De timer loopt nog. Als je reset, verlies je:
+                </DialogContentText>
+                <ul style={{ marginTop: 8, marginBottom: 8, paddingLeft: 20 }}>
                   <li>Alle getimede tijd ({formatTime(timerState.elapsedSeconds)})</li>
                   {timerState.sessions && timerState.sessions.length > 0 && (
                     <li>Alle opgebouwde sessions ({timerState.sessions.length})</li>
                   )}
                   <li>Je instellingen (klant, project, omschrijving)</li>
                 </ul>
-                <strong style={{ marginTop: 8, display: "block" }}>
+                <DialogContentText sx={{ fontWeight: "bold", mt: 1 }}>
                   Klik eerst op "Stop" om de tijd op te slaan!
-                </strong>
+                </DialogContentText>
               </>
             ) : (
               <>
-                Als je reset, verlies je:
-                <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                <DialogContentText>
+                  Als je reset, verlies je:
+                </DialogContentText>
+                <ul style={{ marginTop: 8, marginBottom: 8, paddingLeft: 20 }}>
                   <li>Alle getimede tijd ({formatTime(timerState.elapsedSeconds)})</li>
                   {timerState.sessions && timerState.sessions.length > 0 && (
                     <li>Alle opgebouwde sessions ({timerState.sessions.length})</li>
                   )}
                   <li>Je instellingen (klant, project, omschrijving)</li>
                 </ul>
-                <strong style={{ marginTop: 8, display: "block" }}>
+                <DialogContentText sx={{ fontWeight: "bold", mt: 1 }}>
                   Weet je zeker dat je alles wilt wissen?
-                </strong>
+                </DialogContentText>
               </>
             )}
-          </DialogContentText>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button 
