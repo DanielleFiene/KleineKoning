@@ -6,9 +6,23 @@
  */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { format } from "date-fns";
+import {
+  format,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  startOfQuarter,
+  endOfQuarter,
+  startOfYear,
+  endOfYear,
+  subWeeks,
+  subMonths,
+  subQuarters,
+  subYears,
+} from "date-fns";
 import { nl } from "date-fns/locale";
 import {
   Container,
@@ -36,6 +50,7 @@ import {
   TextField,
   Checkbox,
   FormControlLabel,
+  CircularProgress,
 } from "@mui/material";
 import {
   ChevronLeft,
@@ -51,26 +66,17 @@ import {
 import { useToast } from "@/components/toast-provider";
 import type { RevenueEntry } from "@/app/actions/revenue";
 
-interface RevenuePageClientProps {
-  initialData: RevenueEntry[];
-  periodType: string;
-  periodOffset: number;
-  startDate: string;
-  endDate: string;
-}
-
-export function RevenuePageClient({
-  initialData,
-  periodType,
-  periodOffset,
-  startDate,
-  endDate,
-}: RevenuePageClientProps) {
+export default function RevenuePageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const toast = useToast();
   const [expandedClients, setExpandedClients] = useState<Set<string>>(new Set());
-  const [data] = useState<RevenueEntry[]>(initialData);
+  const [data, setData] = useState<RevenueEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [periodType, setPeriodType] = useState<string>("week");
+  const [periodOffset, setPeriodOffset] = useState<number>(0);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [emailAddresses, setEmailAddresses] = useState<string[]>([""]);
@@ -78,6 +84,79 @@ export function RevenuePageClient({
   const [includePdf, setIncludePdf] = useState(true);
   const [includeCsv, setIncludeCsv] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // Load data when period changes
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      try {
+        const response = await fetch(
+          `/api/revenue?startDate=${startDate}&endDate=${endDate}`
+        );
+        if (!response.ok) {
+          throw new Error("Fout bij ophalen data");
+        }
+        const revenueData = await response.json();
+        setData(revenueData);
+      } catch (error) {
+        toast.showError("Fout bij ophalen data: " + (error as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (startDate && endDate) {
+      loadData();
+    }
+  }, [startDate, endDate, toast]);
+
+  // Calculate period dates from search params
+  useEffect(() => {
+    const type = searchParams.get("type") || "week";
+    const offset = parseInt(searchParams.get("period") || "0", 10);
+    
+    setPeriodType(type);
+    setPeriodOffset(offset);
+
+    // Get current date using local date components to avoid timezone issues
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();
+    const day = today.getDate();
+    const now = new Date(year, month, day); // Local date at midnight
+    
+    let start: Date;
+    let end: Date;
+
+    switch (type) {
+      case "month":
+        start = startOfMonth(subMonths(now, offset));
+        end = endOfMonth(subMonths(now, offset));
+        break;
+      case "quarter":
+        start = startOfQuarter(subQuarters(now, offset));
+        end = endOfQuarter(subQuarters(now, offset));
+        break;
+      case "year":
+        start = startOfYear(subYears(now, offset));
+        end = endOfYear(subYears(now, offset));
+        break;
+      default: // week
+        start = startOfWeek(subWeeks(now, offset), { weekStartsOn: 1 });
+        end = endOfWeek(subWeeks(now, offset), { weekStartsOn: 1 });
+    }
+
+    // Format dates using local date components to avoid timezone issues
+    const formatLocalDate = (date: Date): string => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    };
+
+    setStartDate(formatLocalDate(start));
+    setEndDate(formatLocalDate(end));
+  }, [searchParams]);
 
   const handlePeriodTypeChange = (type: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -127,19 +206,36 @@ export function RevenuePageClient({
   };
 
   const formatPeriodLabel = () => {
+    if (!startDate || !endDate) {
+      return "Laden...";
+    }
+
     const start = new Date(startDate);
     const end = new Date(endDate);
 
+    // Validate dates
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      return "Ongeldige datum";
+    }
+
     switch (periodType) {
       case "month":
-        return format(start, "MMMM yyyy", { locale: nl });
+        const monthLabel = format(start, "MMMM yyyy", { locale: nl });
+        const weekNumber = format(start, "w", { locale: nl });
+        return `${monthLabel} (week ${weekNumber})`;
       case "quarter":
         const quarter = Math.floor(start.getMonth() / 3) + 1;
-        return `Q${quarter} ${format(start, "yyyy", { locale: nl })}`;
+        const quarterLabel = `Q${quarter} ${format(start, "yyyy", { locale: nl })}`;
+        const quarterWeekNumber = format(start, "w", { locale: nl });
+        return `${quarterLabel} (week ${quarterWeekNumber})`;
       case "year":
-        return format(start, "yyyy", { locale: nl });
+        const yearLabel = format(start, "yyyy", { locale: nl });
+        const yearMonth = format(start, "MMMM", { locale: nl });
+        return `${yearLabel} (${yearMonth})`;
       default: // week
-        return `${format(start, "d MMM", { locale: nl })} - ${format(end, "d MMM yyyy", { locale: nl })}`;
+        const weekLabel = `${format(start, "d MMM", { locale: nl })} - ${format(end, "d MMM yyyy", { locale: nl })}`;
+        const weekNum = format(start, "w", { locale: nl });
+        return `${weekLabel} (week ${weekNum})`;
     }
   };
 
@@ -427,7 +523,13 @@ export function RevenuePageClient({
         </Box>
       </Paper>
 
-      {data.length === 0 ? (
+      {loading ? (
+        <Paper elevation={1} sx={{ p: 4, textAlign: "center" }}>
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "200px" }}>
+            <CircularProgress />
+          </Box>
+        </Paper>
+      ) : data.length === 0 ? (
         <Paper elevation={1} sx={{ p: 4, textAlign: "center" }}>
           <Typography variant="body1" color="text.secondary">
             Geen data beschikbaar voor deze periode
