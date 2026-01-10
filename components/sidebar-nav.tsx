@@ -15,7 +15,7 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Box, Typography, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
-import { Clock, Download, Users, Briefcase } from "lucide-react";
+import { Clock, Download, Users, Briefcase, Euro } from "lucide-react";
 
 const menuItems = [
   {
@@ -37,6 +37,11 @@ const menuItems = [
     title: "Projecten",
     url: "/projects",
     icon: Briefcase,
+  },
+  {
+    title: "Inkomsten",
+    url: "/revenue",
+    icon: Euro,
   },
 ];
 

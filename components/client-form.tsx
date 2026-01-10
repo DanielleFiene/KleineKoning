@@ -1,4 +1,10 @@
-// components/client-form.tsx
+/**
+ * components/client-form.tsx
+ * 
+ * Form component voor het aanmaken en bewerken van klanten. Bevat velden voor
+ * naam, BTW nummer, BTW profiel (NL/EU/Buitenland), en adresgegevens.
+ * Valideert input en gebruikt server actions voor opslaan.
+ */
 "use client";
 
 import { useFormStatus } from "react-dom";

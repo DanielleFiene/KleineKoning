@@ -1,4 +1,9 @@
-// components/app-sidebar.tsx
+/**
+ * components/app-sidebar.tsx
+ * 
+ * Sidebar wrapper component voor het dashboard. Gebruikt Radix UI Sidebar primitives
+ * en integreert SidebarNav voor navigatie. Ondersteunt responsive gedrag.
+ */
 "use client";
 
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";

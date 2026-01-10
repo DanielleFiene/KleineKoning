@@ -1,3 +1,10 @@
+/**
+ * components/timer-stop-dialog.tsx
+ * 
+ * Dialog component voor het stoppen en opslaan van de timer. Toont totale duur,
+ * afronding preview, en opties voor datum selectie en "opslaan voor later".
+ * Past afrondingsregels toe per project.
+ */
 "use client";
 
 import { useState } from "react";

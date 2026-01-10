@@ -1,4 +1,10 @@
-// components/project-form.tsx
+/**
+ * components/project-form.tsx
+ * 
+ * Form component voor het aanmaken en bewerken van projecten. Bevat velden voor
+ * klant selectie, naam (max 20 karakters), tarief, standaard unit en afrondingsregel.
+ * Valideert input en gebruikt server actions voor opslaan.
+ */
 "use client";
 
 import { useFormStatus } from "react-dom";
