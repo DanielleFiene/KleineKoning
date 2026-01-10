@@ -20,6 +20,7 @@ import {
   MenuItem,
   Button,
   Box,
+  Typography,
 } from "@mui/material";
 import { useToast } from "@/components/toast-provider";
 
@@ -169,6 +170,11 @@ export function TimerSetupDialog({
       return;
     }
     
+    if (description.trim().length > 75) {
+      toast.showWarning("Omschrijving mag maximaal 75 karakters bevatten");
+      return;
+    }
+    
     // If no project selected, use "algemeen"
     const projectId = selectedProject || "algemeen";
 
@@ -237,9 +243,29 @@ export function TimerSetupDialog({
             id="timer-description"
             label="Omschrijving"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              if (newValue.length <= 75) {
+                setDescription(newValue);
+              } else {
+                // Show warning if trying to exceed limit
+                toast.showWarning("Omschrijving mag maximaal 75 karakters bevatten");
+              }
+            }}
             placeholder="Wat ga je doen?"
             fullWidth
+            inputProps={{ maxLength: 75 }}
+            helperText={
+              <Typography
+                component="span"
+                sx={{
+                  fontWeight: description.length >= 75 ? "bold" : "normal",
+                  color: description.length >= 75 ? "error.main" : "text.secondary",
+                }}
+              >
+                {description.length}/75 karakters
+              </Typography>
+            }
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();

@@ -86,6 +86,7 @@ export function TimeEntriesView({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
   
   // Entry form state
   const [selectedClient, setSelectedClient] = useState<string>("");
@@ -216,6 +217,40 @@ export function TimeEntriesView({
     }
   };
 
+  const handleEdit = async (entry: TimeEntry) => {
+    setEditingEntry(entry);
+    setSelectedClient(entry.client_id || "");
+    setDate(entry.date.split("T")[0]);
+    setDescription(entry.description);
+    setDurationValue(entry.duration_minutes.toString());
+    setDurationUnit("minutes");
+    
+    // Load projects for the client first, then set the project
+    if (entry.client_id) {
+      try {
+        const response = await fetch(`/api/projects?client_id=${entry.client_id}`);
+        const projs = await response.json();
+        setProjects(projs);
+        // Also update allProjects for default_unit lookup
+        setAllProjects((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newProjects = projs.filter((p: any) => !existingIds.has(p.id));
+          return [...prev, ...newProjects];
+        });
+        // Now set the project after projects are loaded
+        setSelectedProject(entry.project_id || "");
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+        setProjects([]);
+        setSelectedProject(entry.project_id || "");
+      }
+    } else {
+      setSelectedProject(entry.project_id || "");
+    }
+    
+    setEntryModalOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClient || !selectedProject || !durationValue) {
@@ -223,82 +258,122 @@ export function TimeEntriesView({
       return;
     }
 
+    if (description.trim().length > 75) {
+      toast.showWarning("Omschrijving mag maximaal 75 karakters bevatten");
+      return;
+    }
+
     setLoading(true);
     try {
-      const formData = new FormData();
-      formData.set("client_id", selectedClient);
-      formData.set("project_id", selectedProject);
-      formData.set("date", date);
-      formData.set("description", description);
-      formData.set("duration_value", durationValue);
-      formData.set("duration_unit", durationUnit);
+      if (editingEntry) {
+        // Update existing entry
+        const res = await fetch(`/api/time-entries/${editingEntry.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: selectedClient,
+            project_id: selectedProject,
+            date: date,
+            description: description,
+            duration_value: parseFloat(durationValue),
+            duration_unit: durationUnit,
+          }),
+        });
 
-      const res = await fetch("/api/time-entries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: selectedClient,
-          project_id: selectedProject,
-          date: date,
-          description: description,
-          duration_value: parseFloat(durationValue),
-          duration_unit: durationUnit,
-        }),
-      });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Bijwerken mislukt");
+        }
+        
+        const responseData = await res.json();
+        const updatedEntry = responseData.entry;
+        
+        // Update entry in local state
+        setEntries((prevEntries) =>
+          prevEntries.map((e) =>
+            e.id === editingEntry.id
+              ? {
+                  ...updatedEntry,
+                  clients: updatedEntry.clients || { name: "" },
+                  projects: updatedEntry.projects || { name: "", rounding_rule: "none" },
+                }
+              : e
+          )
+        );
+        
+        toast.showSuccess("Tijdentry bijgewerkt");
+      } else {
+        // Create new entry
+        const res = await fetch("/api/time-entries", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: selectedClient,
+            project_id: selectedProject,
+            date: date,
+            description: description,
+            duration_value: parseFloat(durationValue),
+            duration_unit: durationUnit,
+          }),
+        });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Opslaan mislukt");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "Opslaan mislukt");
+        }
+        
+        const responseData = await res.json();
+        const newEntry = responseData.entry;
+        
+        // Check if the saved date is in the current week
+        const savedDate = parseDateString(date);
+        const savedDateWeekStart = startOfWeek(savedDate, { weekStartsOn: 1 });
+        const isInCurrentWeek = isSameWeek(savedDateWeekStart, currentWeek, { weekStartsOn: 1 });
+        
+        if (isInCurrentWeek) {
+          // Entry is in current week: add it locally to avoid refresh
+          // The API response already includes clients and projects relations
+          const entryWithRelations: TimeEntry = {
+            ...newEntry,
+            clients: newEntry.clients || { name: "" },
+            projects: newEntry.projects || { name: "", rounding_rule: "none" },
+          };
+          
+          // Add new entry to the list (sorted by date, then created_at)
+          setEntries((prevEntries) => {
+            const updated = [...prevEntries, entryWithRelations];
+            // Sort by date descending, then by created_at descending
+            return updated.sort((a, b) => {
+              if (a.date !== b.date) {
+                return b.date.localeCompare(a.date);
+              }
+              return (b as any).created_at?.localeCompare((a as any).created_at) || 0;
+            });
+          });
+          
+          toast.showSuccess("Tijdentry opgeslagen");
+        } else {
+          // Entry is in different week: navigate to that week
+          const params = new URLSearchParams();
+          const year = savedDateWeekStart.getFullYear();
+          const month = String(savedDateWeekStart.getMonth() + 1).padStart(2, "0");
+          const day = String(savedDateWeekStart.getDate()).padStart(2, "0");
+          params.set("week", `${year}-${month}-${day}`);
+          if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
+          if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
+          router.push(`/time?${params.toString()}`);
+          
+          toast.showSuccess("Tijdentry opgeslagen");
+        }
       }
       
-      const responseData = await res.json();
-      const newEntry = responseData.entry;
-      
+      // Reset form
       setDescription("");
       setDurationValue("");
       setSelectedProject("");
+      setSelectedClient("");
+      setEditingEntry(null);
       setEntryModalOpen(false);
-      
-      // Check if the saved date is in the current week
-      const savedDate = parseDateString(date);
-      const savedDateWeekStart = startOfWeek(savedDate, { weekStartsOn: 1 });
-      const isInCurrentWeek = isSameWeek(savedDateWeekStart, currentWeek, { weekStartsOn: 1 });
-      
-      if (isInCurrentWeek) {
-        // Entry is in current week: add it locally to avoid refresh
-        // The API response already includes clients and projects relations
-        const entryWithRelations: TimeEntry = {
-          ...newEntry,
-          clients: newEntry.clients || { name: "" },
-          projects: newEntry.projects || { name: "", rounding_rule: "none" },
-        };
-        
-        // Add new entry to the list (sorted by date, then created_at)
-        setEntries((prevEntries) => {
-          const updated = [...prevEntries, entryWithRelations];
-          // Sort by date descending, then by created_at descending
-          return updated.sort((a, b) => {
-            if (a.date !== b.date) {
-              return b.date.localeCompare(a.date);
-            }
-            return (b as any).created_at?.localeCompare((a as any).created_at) || 0;
-          });
-        });
-        
-        toast.showSuccess("Tijdentry opgeslagen");
-      } else {
-        // Entry is in different week: navigate to that week
-        const params = new URLSearchParams();
-        const year = savedDateWeekStart.getFullYear();
-        const month = String(savedDateWeekStart.getMonth() + 1).padStart(2, "0");
-        const day = String(savedDateWeekStart.getDate()).padStart(2, "0");
-        params.set("week", `${year}-${month}-${day}`);
-        if (filterClient && filterClient !== "all") params.set("client_id", filterClient);
-        if (filterProject && filterProject !== "all") params.set("project_id", filterProject);
-        router.push(`/time?${params.toString()}`);
-        
-        toast.showSuccess("Tijdentry opgeslagen");
-      }
     } catch (error) {
       toast.showError("Fout: " + (error as Error).message);
     } finally {
@@ -1618,6 +1693,17 @@ export function TimeEntriesView({
                                 <Box sx={{ display: "flex", gap: 0.5 }}>
                                   <IconButton
                                     size="small"
+                                    onClick={() => handleEdit(entry)}
+                                    title="Bewerken"
+                                    sx={{
+                                      color: "primary.main",
+                                      "&:hover": { backgroundColor: "primary.light", color: "primary.dark" },
+                                    }}
+                                  >
+                                    <Edit size={18} />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
                                     onClick={() => handleDuplicate(entry)}
                                     title="Dupliceren"
                                     sx={{
@@ -1660,8 +1746,15 @@ export function TimeEntriesView({
       </Paper>
 
       {/* Entry Modal */}
-      <Dialog open={entryModalOpen} onClose={() => setEntryModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Nieuwe entry</DialogTitle>
+      <Dialog open={entryModalOpen} onClose={() => {
+        setEntryModalOpen(false);
+        setEditingEntry(null);
+        setDescription("");
+        setDurationValue("");
+        setSelectedProject("");
+        setSelectedClient("");
+      }} maxWidth="sm" fullWidth>
+        <DialogTitle>{editingEntry ? "Entry bewerken" : "Nieuwe entry"}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Voeg een nieuwe tijdregistratie toe
@@ -1756,10 +1849,30 @@ export function TimeEntriesView({
               <TextField
                 id="entry-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  if (newValue.length <= 75) {
+                    setDescription(newValue);
+                  } else {
+                    // Show warning if trying to exceed limit
+                    toast.showWarning("Omschrijving mag maximaal 75 karakters bevatten");
+                  }
+                }}
                 required
                 placeholder="Wat heb je gedaan?"
                 fullWidth
+                inputProps={{ maxLength: 75 }}
+                helperText={
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontWeight: description.length >= 75 ? "bold" : "normal",
+                      color: description.length >= 75 ? "error.main" : "text.secondary",
+                    }}
+                  >
+                    {description.length}/75 karakters
+                  </Typography>
+                }
               />
             </Box>
 
@@ -1770,7 +1883,7 @@ export function TimeEntriesView({
                 </Typography>
                 <InfoIcon title="Voer de duur in. Kies de eenheid (minuten, kwartier, uur of dag). De afrondingsregel van het project wordt automatisch toegepast." size="small" />
               </Box>
-              <Box sx={{ display: "flex", gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2, alignItems: "flex-start" }}>
                 <TextField
                   id="entry-duration-value"
                   type="number"
@@ -1781,27 +1894,19 @@ export function TimeEntriesView({
                   placeholder="1.5"
                   sx={{ flex: 1 }}
                 />
-                <Box sx={{ flex: 1 }}>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
-                    <Typography variant="body2" fontWeight={500} sx={{ fontSize: "0.75rem" }}>
-                      Eenheid
-                    </Typography>
-                    <InfoIcon title="Kies de eenheid voor de duur. De standaard unit van het geselecteerde project wordt automatisch ingesteld, maar je kunt dit aanpassen." size="small" />
-                  </Box>
-                  <FormControl fullWidth>
-                    <InputLabel>Eenheid</InputLabel>
-                    <Select
-                      value={durationUnit}
-                      onChange={(e) => setDurationUnit(e.target.value)}
-                      label="Eenheid"
-                    >
-                      <MenuItem value="minutes">Minuten</MenuItem>
-                      <MenuItem value="quarter">Kwartier</MenuItem>
-                      <MenuItem value="hour">Uur</MenuItem>
-                      <MenuItem value="day">Dag</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Box>
+                <FormControl sx={{ flex: 1 }}>
+                  <InputLabel>Eenheid</InputLabel>
+                  <Select
+                    value={durationUnit}
+                    onChange={(e) => setDurationUnit(e.target.value)}
+                    label="Eenheid"
+                  >
+                    <MenuItem value="minutes">Minuten</MenuItem>
+                    <MenuItem value="quarter">Kwartier</MenuItem>
+                    <MenuItem value="hour">Uur</MenuItem>
+                    <MenuItem value="day">Dag</MenuItem>
+                  </Select>
+                </FormControl>
               </Box>
             </Box>
 

@@ -48,6 +48,14 @@ export async function POST(req: NextRequest) {
   try {
     const { client_id, name, rate_ex_btw, default_unit, rounding_rule } = await req.json();
 
+    // Validate name length
+    if (name && name.trim().length > 20) {
+      return NextResponse.json(
+        { error: "Project naam mag maximaal 20 karakters bevatten" },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -76,4 +84,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

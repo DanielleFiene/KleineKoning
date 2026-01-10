@@ -131,6 +131,11 @@ export async function createTimeEntry(formData: FormData) {
   const durationValue = parseFloat(formData.get("duration_value") as string);
   const durationUnit = formData.get("duration_unit") as string;
 
+  // Validate description length
+  if (description && description.trim().length > 75) {
+    throw new Error("Omschrijving mag maximaal 75 karakters bevatten");
+  }
+
   // Get project to check rounding rule
   const { data: project } = await supabase
     .from("projects")
@@ -184,6 +189,11 @@ export async function updateTimeEntry(id: string, formData: FormData) {
   const description = formData.get("description") as string;
   const durationValue = parseFloat(formData.get("duration_value") as string);
   const durationUnit = formData.get("duration_unit") as string;
+
+  // Validate description length
+  if (description && description.trim().length > 75) {
+    throw new Error("Omschrijving mag maximaal 75 karakters bevatten");
+  }
 
   // Get project to check rounding rule
   const { data: project } = await supabase

@@ -2,6 +2,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
+import { useState } from "react";
 import {
   Paper,
   Box,
@@ -61,9 +62,16 @@ export function ProjectForm({
   const router = useRouter();
   const toast = useToast();
   const isEdit = !!project;
+  const [projectName, setProjectName] = useState(project?.name || "");
 
   async function formAction(formData: FormData) {
     try {
+      const name = formData.get("name") as string;
+      if (name && name.trim().length > 20) {
+        toast.showWarning("Project naam mag maximaal 20 karakters bevatten");
+        return;
+      }
+
       if (isEdit && project) {
         await updateProject(project.id, formData);
         toast.showSuccess("Project bijgewerkt");
@@ -130,11 +138,32 @@ export function ProjectForm({
           <TextField
             id="name"
             name="name"
-            defaultValue={project?.name}
+            value={projectName}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              if (newValue.length <= 20) {
+                setProjectName(newValue);
+              } else {
+                // Show warning if trying to exceed limit
+                toast.showWarning("Project naam mag maximaal 20 karakters bevatten");
+              }
+            }}
             required
             placeholder="Project naam"
             fullWidth
             sx={{ maxWidth: 400 }}
+            inputProps={{ maxLength: 20 }}
+            helperText={
+              <Typography
+                component="span"
+                sx={{
+                  fontWeight: projectName.length >= 20 ? "bold" : "normal",
+                  color: projectName.length >= 20 ? "error.main" : "text.secondary",
+                }}
+              >
+                {projectName.length}/20 karakters
+              </Typography>
+            }
           />
         </Box>
 

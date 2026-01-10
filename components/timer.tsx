@@ -48,6 +48,7 @@ interface TimerState {
   sessions: TimerSession[]; // Accumulated sessions
   lastSaved?: number; // Timestamp when timer was last saved (prevents duplicate saves)
   ownerTabId?: string; // ID of the tab that owns/started the timer
+  manuallyPaused?: boolean; // True if timer was manually paused (not by tab close)
 }
 
 const TIMER_STORAGE_KEY = "kleinekoning_timer";
@@ -85,6 +86,7 @@ export function Timer({
   const toast = useToast();
   const tabId = typeof window !== "undefined" ? getTabId() : "";
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
   const [timerState, setTimerState] = useState<TimerState>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(TIMER_STORAGE_KEY);
@@ -123,9 +125,24 @@ export function Timer({
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Save state to localStorage and broadcast updates
+  // Skip saving if state is being reset (empty state)
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(timerState));
+      // Only save if timer has meaningful state or is explicitly reset
+      // If all fields are empty/null, it's a reset - remove from storage
+      if (!timerState.isRunning && 
+          !timerState.startTime && 
+          timerState.elapsedSeconds === 0 && 
+          !timerState.clientId && 
+          !timerState.projectId && 
+          !timerState.description && 
+          timerState.sessions.length === 0) {
+        // This is a reset state - remove from storage
+        localStorage.removeItem(TIMER_STORAGE_KEY);
+      } else {
+        localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(timerState));
+      }
       
       // Broadcast to other tabs using BroadcastChannel (more reliable than storage events)
       try {
@@ -142,29 +159,71 @@ export function Timer({
   useEffect(() => {
     if (timerState.isRunning && timerState.startTime) {
       // Calculate elapsed time from startTime (works across tabs)
+      // This approach prevents throttling issues because we always calculate from startTime,
+      // not by counting increments, so even if updates are throttled, the timer stays accurate
       const startTime = timerState.startTime; // Capture startTime in closure
+      let animationFrameId: number | null = null;
+      let lastUpdateTime = Date.now();
+      
       const updateElapsed = () => {
-        setTimerState((prev) => {
-          // Only update if timer is still running and startTime matches
-          if (prev.isRunning && prev.startTime === startTime && prev.startTime) {
-            const elapsed = Math.floor((Date.now() - prev.startTime) / 1000);
-            return {
-              ...prev,
-              elapsedSeconds: elapsed,
-            };
-          }
-          return prev;
-        });
+        const now = Date.now();
+        // Use requestAnimationFrame for smooth updates
+        // Update display every ~100ms to avoid excessive re-renders
+        // Note: Browser may throttle requestAnimationFrame in background tabs,
+        // but timer accuracy is maintained because we calculate from startTime
+        if (now - lastUpdateTime >= 100) {
+          setTimerState((prev) => {
+            // Only update if timer is still running and startTime matches
+            if (prev.isRunning && prev.startTime === startTime && prev.startTime) {
+              const elapsed = Math.floor((Date.now() - prev.startTime) / 1000);
+              return {
+                ...prev,
+                elapsedSeconds: elapsed,
+              };
+            }
+            return prev;
+          });
+          lastUpdateTime = now;
+        }
+        
+        // Continue animation loop (may be throttled by browser in background tabs)
+        if (timerState.isRunning && timerState.startTime === startTime) {
+          animationFrameId = requestAnimationFrame(updateElapsed);
+        }
       };
       
       // Update immediately
       updateElapsed();
       
-      // Then update every second
-      // Only set interval if we don't already have one (prevent duplicate intervals)
+      // Use setInterval for guaranteed updates every second
+      // This ensures the timer updates even if requestAnimationFrame is throttled
+      // Browser may throttle this in background tabs, but accuracy is maintained
+      // because we calculate elapsed time from startTime, not by counting
       if (!intervalRef.current) {
-        intervalRef.current = setInterval(updateElapsed, 1000);
+        intervalRef.current = setInterval(() => {
+          setTimerState((prev) => {
+            // Only update if timer is still running and startTime matches
+            if (prev.isRunning && prev.startTime === startTime && prev.startTime) {
+              const elapsed = Math.floor((Date.now() - prev.startTime) / 1000);
+              return {
+                ...prev,
+                elapsedSeconds: elapsed,
+              };
+            }
+            return prev;
+          });
+        }, 1000);
       }
+      
+      return () => {
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+        }
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -188,13 +247,25 @@ export function Timer({
       }
       return;
     }
-    // Project is optioneel - "Algemeen" is altijd beschikbaar
+    
+    // If timer was paused, resume from where it was
+    // Otherwise, start fresh
+    const now = Date.now();
+    const pausedElapsed = timerState.elapsedSeconds;
+    
+    // Adjust startTime so that elapsedSeconds will be correct when we resume
+    // If we have elapsed time, we need to adjust startTime to account for it
+    const adjustedStartTime = pausedElapsed > 0 
+      ? now - (pausedElapsed * 1000)
+      : now;
+    
     // This tab becomes the owner of the timer
     setTimerState((prev) => ({
       ...prev,
       isRunning: true,
-      startTime: Date.now(),
+      startTime: adjustedStartTime,
       ownerTabId: tabId, // Set this tab as the owner
+      manuallyPaused: false, // Clear manual pause flag when starting
     }));
   };
 
@@ -281,6 +352,24 @@ export function Timer({
                 return prev;
               }
               
+              // Don't overwrite if this tab is the owner and we just paused (prevent race condition)
+              if (!prev.isRunning && prev.ownerTabId === tabId && prev.manuallyPaused) {
+                // Keep our local state if we're the owner and manually paused
+                return prev;
+              }
+              
+              // Don't overwrite if we just reset (empty state)
+              if (!prev.isRunning && 
+                  !prev.startTime && 
+                  prev.elapsedSeconds === 0 && 
+                  !prev.clientId && 
+                  !prev.projectId && 
+                  !prev.description && 
+                  prev.sessions.length === 0) {
+                // This is a reset state - don't overwrite it
+                return prev;
+              }
+              
               // If timer was running in other tab, calculate elapsed time
               if (parsed.isRunning && parsed.startTime) {
                 const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
@@ -295,6 +384,12 @@ export function Timer({
               
               // Timer is stopped, just sync state without updating elapsedSeconds
               // Also sync clientId, projectId, description when timer is stopped
+              // But don't overwrite if this tab is the owner and we just paused
+              if (!parsed.isRunning && parsed.ownerTabId === tabId && parsed.manuallyPaused) {
+                // If we're the owner and manually paused, keep our state
+                return prev;
+              }
+              
               return {
                 ...parsed,
                 elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
@@ -323,6 +418,24 @@ export function Timer({
                 return prev;
               }
               
+              // Don't overwrite if this tab is the owner and we just paused (prevent race condition)
+              if (!prev.isRunning && prev.ownerTabId === tabId && prev.manuallyPaused) {
+                // Keep our local state if we're the owner and manually paused
+                return prev;
+              }
+              
+              // Don't overwrite if we just reset (empty state)
+              if (!prev.isRunning && 
+                  !prev.startTime && 
+                  prev.elapsedSeconds === 0 && 
+                  !prev.clientId && 
+                  !prev.projectId && 
+                  !prev.description && 
+                  prev.sessions.length === 0) {
+                // This is a reset state - don't overwrite it
+                return prev;
+              }
+              
               if (parsed.isRunning && parsed.startTime) {
                 const elapsed = Math.floor((Date.now() - parsed.startTime) / 1000);
                 return {
@@ -330,12 +443,18 @@ export function Timer({
                   elapsedSeconds: elapsed, // Calculate from startTime, don't add to old value
                   startTime: parsed.startTime,
                   ownerTabId: parsed.ownerTabId, // Preserve owner tab ID
-                  sessions: parsed.sessions || prev.sessions || [],
+                  sessions: parsed.sessions || [],
                 };
               }
               
               // Timer is stopped, just sync state without updating elapsedSeconds
               // Also sync clientId, projectId, description when timer is stopped
+              // But don't overwrite if this tab is the owner and we just paused
+              if (!parsed.isRunning && parsed.ownerTabId === tabId && parsed.manuallyPaused) {
+                // If we're the owner and manually paused, keep our state
+                return prev;
+              }
+              
               return {
                 ...parsed,
                 elapsedSeconds: parsed.elapsedSeconds || 0, // Keep existing value
@@ -343,12 +462,39 @@ export function Timer({
                 clientId: parsed.clientId || null, // Sync clientId
                 projectId: parsed.projectId || null, // Sync projectId
                 description: parsed.description || "", // Sync description
-                sessions: parsed.sessions || prev.sessions || [],
+                sessions: parsed.sessions || [],
               };
             });
           } catch {
             // Ignore
           }
+        } else {
+          // localStorage was removed - this might be a reset
+          // Only sync if we're not the owner or if we didn't just reset
+          setTimerState((prev) => {
+            // If we're the owner and just reset, keep our state
+            if (!prev.isRunning && 
+                !prev.startTime && 
+                prev.elapsedSeconds === 0 && 
+                !prev.clientId && 
+                !prev.projectId && 
+                !prev.description && 
+                prev.sessions.length === 0) {
+              return prev; // Keep reset state
+            }
+            // Otherwise, sync to empty state
+            return {
+              isRunning: false,
+              startTime: null,
+              elapsedSeconds: 0,
+              clientId: null,
+              projectId: null,
+              description: "",
+              sessions: [],
+              ownerTabId: undefined,
+              manuallyPaused: false,
+            };
+          });
         }
       };
 
@@ -421,13 +567,89 @@ export function Timer({
     }
   }, [tabId]);
 
-  const handleStop = () => {
+  // Handle tab close - pause timer if running
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Check current state from localStorage to get most up-to-date info
+      const saved = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Only warn if this tab owns the timer and it's running
+          if (parsed.isRunning && parsed.ownerTabId === tabId) {
+            // Pause the timer before the tab closes
+            // Calculate current elapsed time
+            const currentElapsed = parsed.startTime 
+              ? Math.floor((Date.now() - parsed.startTime) / 1000)
+              : parsed.elapsedSeconds || 0;
+            
+            // Save paused state to localStorage
+            const pausedState = {
+              ...parsed,
+              isRunning: false, // Pause but keep elapsed time
+              elapsedSeconds: currentElapsed, // Update to current elapsed time
+              manuallyPaused: false, // Paused by tab close, not manually
+            };
+            localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(pausedState));
+            
+            // Standard way to show warning
+            e.preventDefault();
+            e.returnValue = "De timer loopt nog. Als je deze tab sluit, wordt de timer gepauzeerd en niet automatisch opgeslagen. Weet je zeker dat je wilt doorgaan?";
+            return e.returnValue;
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    };
+
+    // Check if timer was running when page loads (user came back after closing tab)
+    // Only show warning if timer was paused by beforeunload (tab close), not by manual pause
+    const checkResumedTimer = () => {
+      const saved = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // If timer was running but is now paused, and we're the owner tab
+          // Only show warning if it was NOT manually paused (i.e., paused by tab close)
+          if (!parsed.isRunning && parsed.ownerTabId === tabId && parsed.elapsedSeconds > 0 && !parsed.manuallyPaused) {
+            // Check if it was recently paused (within last 2 seconds)
+            // This indicates the tab was just closed/reopened (beforeunload pauses it)
+            const lastSaved = parsed.lastSaved || 0;
+            const timeSincePause = Date.now() - lastSaved;
+            
+            // Only show warning if paused very recently (within 2 seconds) and has lastSaved timestamp
+            // This means it was paused by beforeunload, not manually
+            if (timeSincePause < 2000 && lastSaved > 0) {
+              toast.showWarning(
+                "De timer is gepauzeerd omdat de tab werd gesloten. Klik op 'Verder timen' om door te gaan."
+              );
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    
+    // Check on mount if timer was paused due to tab close
+    checkResumedTimer();
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [tabId, toast]);
+
+  const handlePause = () => {
     if (!timerState.isRunning) return;
     
-    // CRITICAL: Only the owner tab can stop the timer
-    // Check both current state and localStorage to prevent race conditions
+    // CRITICAL: Only the owner tab can pause the timer
     if (timerState.ownerTabId && timerState.ownerTabId !== tabId) {
-      toast.showWarning("Alleen de tab waar de timer is gestart kan deze stoppen");
+      toast.showWarning("Alleen de tab waar de timer is gestart kan deze pauzeren");
       return;
     }
     
@@ -437,26 +659,8 @@ export function Timer({
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // If timer is not running, it was already stopped
-          if (!parsed.isRunning && parsed.lastSaved) {
-            const timeSinceSave = Date.now() - parsed.lastSaved;
-            // If saved within last 5 seconds, don't save again
-            if (timeSinceSave < 5000) {
-              // Just sync the state, don't save
-              setTimerState((prev) => ({
-                ...prev,
-                isRunning: false,
-                startTime: null,
-                elapsedSeconds: 0,
-                sessions: [],
-                ownerTabId: undefined,
-              }));
-              return;
-            }
-          }
-          // CRITICAL: If ownerTabId exists and doesn't match this tab, block stop
           if (parsed.isRunning && parsed.ownerTabId && parsed.ownerTabId !== tabId) {
-            toast.showWarning("Alleen de tab waar de timer is gestart kan deze stoppen");
+            toast.showWarning("Alleen de tab waar de timer is gestart kan deze pauzeren");
             return;
           }
         } catch {
@@ -465,31 +669,67 @@ export function Timer({
       }
     }
     
+    // Pause the timer (stop counting but keep the elapsed time)
     // CRITICAL: Stop the interval FIRST before any state updates
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
     
-    // Also set isRunning to false and startTime to null immediately to prevent interval from restarting
-    // This must be done in one update to prevent the useEffect from restarting the interval
-    setTimerState((prev) => ({
-      ...prev,
-      isRunning: false, // Stop immediately
-      startTime: null, // Clear startTime to prevent interval from restarting
-    }));
+    // Calculate current elapsed time before pausing
+    const currentElapsed = timerState.startTime 
+      ? Math.floor((Date.now() - timerState.startTime) / 1000)
+      : timerState.elapsedSeconds;
     
+    // Create paused state directly (not in setState callback to avoid race conditions)
+    const pausedState = {
+      ...timerState,
+      isRunning: false, // Pause the timer
+      elapsedSeconds: currentElapsed, // Update to current elapsed time
+      manuallyPaused: true, // Mark as manually paused to prevent false warning
+      // Keep startTime so we can resume from the same point
+    };
+    
+    // Save to localStorage immediately BEFORE updating state
+    if (typeof window !== "undefined") {
+      localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(pausedState));
+    }
+    
+    // Then update state - this will trigger useEffect but localStorage is already correct
+    setTimerState(pausedState);
+    
+    toast.showSuccess("Timer gepauzeerd");
+  };
+
+  const handleSave = () => {
+    // Open the save dialog
     if (!timerState.clientId) {
       toast.showWarning("Geen klant geselecteerd");
       return;
     }
     
+    if (timerState.elapsedSeconds === 0) {
+      toast.showWarning("Geen tijd om op te slaan");
+      return;
+    }
+    
+    setStopConfirmOpen(true);
+  };
+
+  const handleStopAndSave = () => {
+    if (!timerState.clientId) {
+      toast.showWarning("Geen klant geselecteerd");
+      setStopConfirmOpen(false);
+      return;
+    }
+    
     // Calculate current session time
-    // elapsedSeconds already contains the full elapsed time (updated by interval)
-    // No need to add currentElapsed - that would double-count
+    // elapsedSeconds already contains the full elapsed time
     const currentMinutes = Math.floor(timerState.elapsedSeconds / 60);
     
-    // Get the date when timer started (use startTime to determine correct date)
+    // Get the date when timer started (use startTime if available, otherwise use current date)
+    // If timer was paused, startTime might be null, so we need to track the original start time
+    // For now, use current date if startTime is not available
     const startDate = timerState.startTime 
       ? new Date(timerState.startTime)
       : new Date();
@@ -532,7 +772,7 @@ export function Timer({
     const now = Date.now();
     setTimerState((prev) => ({
       ...prev,
-      isRunning: false, // Already set above, but ensure it's false
+      isRunning: false,
       startTime: null,
       elapsedSeconds: 0,
       // KEEP clientId, projectId, description - user can start again with same settings
@@ -540,6 +780,8 @@ export function Timer({
       lastSaved: now, // Mark when timer was saved (prevents duplicate saves from other tabs)
       ownerTabId: undefined, // Clear ownership when stopped
     }));
+
+    setStopConfirmOpen(false);
 
     // Always call onStop if we have sessions to save (even if 0 minutes, rounding might make it > 0)
     if (originalClientId && allSessions.length > 0) {
@@ -583,7 +825,13 @@ export function Timer({
   };
 
   const performReset = () => {
-    setTimerState({
+    // Stop interval first
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    const resetState = {
       isRunning: false,
       startTime: null,
       elapsedSeconds: 0,
@@ -592,10 +840,17 @@ export function Timer({
       description: "",
       sessions: [],
       ownerTabId: undefined,
-    });
+      manuallyPaused: false,
+    };
+    
+    // Clear localStorage first BEFORE updating state
     if (typeof window !== "undefined") {
       localStorage.removeItem(TIMER_STORAGE_KEY);
     }
+    
+    // Then update state - this will trigger useEffect but localStorage is already cleared
+    setTimerState(resetState);
+    
     setResetConfirmOpen(false);
     toast.showSuccess("Timer gereset");
   };
@@ -686,6 +941,23 @@ export function Timer({
                   }}
                 />
                 Timer loopt...
+              </Box>
+            ) : timerState.elapsedSeconds > 0 ? (
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.75,
+                  background: "rgba(251, 191, 36, 0.1)",
+                  color: "warning.main",
+                  borderRadius: "9999px",
+                  fontWeight: "bold",
+                  fontSize: "0.875rem",
+                }}
+              >
+                Timer gepauzeerd
               </Box>
             ) : (
               <Typography variant="body2" color="text.secondary">
@@ -781,44 +1053,65 @@ export function Timer({
             </Paper>
           )}
 
-          <Box sx={{ display: "flex", gap: 1 }}>
-            {!timerState.isRunning ? (
-              <Button
-                onClick={handleStart}
-                disabled={!timerState.clientId}
-                variant="contained"
-                fullWidth
-                startIcon={<Play size={18} />}
-                sx={{
-                  background: "linear-gradient(90deg, #9333ea 0%, #ec4899 100%)",
-                  "&:hover": {
-                    background: "linear-gradient(90deg, #7e22ce 0%, #db2777 100%)",
-                  },
-                }}
-              >
-                Start
-              </Button>
-            ) : (
-              <Button
-                onClick={handleStop}
-                variant="contained"
-                fullWidth
-                disabled={!!(timerState.isRunning && timerState.ownerTabId && timerState.ownerTabId !== tabId)}
-                startIcon={<Square size={18} />}
-                sx={{
-                  background: "linear-gradient(90deg, #ef4444 0%, #e11d48 100%)",
-                  "&:hover": {
-                    background: "linear-gradient(90deg, #dc2626 0%, #be185d 100%)",
-                  },
-                }}
-              >
-                Stop
-              </Button>
-            )}
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1 }}>
+              {!timerState.isRunning ? (
+                <>
+                  <Button
+                    onClick={handleStart}
+                    disabled={!timerState.clientId}
+                    variant="contained"
+                    fullWidth
+                    startIcon={<Play size={18} />}
+                    sx={{
+                      background: "linear-gradient(90deg, #9333ea 0%, #ec4899 100%)",
+                      "&:hover": {
+                        background: "linear-gradient(90deg, #7e22ce 0%, #db2777 100%)",
+                      },
+                    }}
+                  >
+                    {timerState.elapsedSeconds > 0 ? "Hervat" : "Start"}
+                  </Button>
+                  {timerState.elapsedSeconds > 0 && (
+                    <Button
+                      onClick={handleSave}
+                      variant="contained"
+                      fullWidth
+                      startIcon={<Square size={18} />}
+                      sx={{
+                        background: "linear-gradient(90deg, #ef4444 0%, #e11d48 100%)",
+                        "&:hover": {
+                          background: "linear-gradient(90deg, #dc2626 0%, #be185d 100%)",
+                        },
+                      }}
+                    >
+                      Opslaan
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <Button
+                  onClick={handlePause}
+                  variant="contained"
+                  fullWidth
+                  disabled={!!(timerState.isRunning && timerState.ownerTabId && timerState.ownerTabId !== tabId)}
+                  startIcon={<Square size={18} />}
+                  sx={{
+                    background: "linear-gradient(90deg, #f59e0b 0%, #eab308 100%)",
+                    "&:hover": {
+                      background: "linear-gradient(90deg, #d97706 0%, #ca8a04 100%)",
+                    },
+                  }}
+                >
+                  Pauzeer
+                </Button>
+              )}
+            </Box>
             {timerState.elapsedSeconds > 0 && (
               <Button
                 onClick={handleReset}
                 variant="outlined"
+                fullWidth
                 startIcon={<RotateCcw size={18} />}
                 sx={{ borderColor: "divider", "&:hover": { backgroundColor: "action.hover" } }}
               >
@@ -828,6 +1121,65 @@ export function Timer({
           </Box>
         </Box>
       </Box>
+
+      {/* Save Dialog */}
+      <Dialog
+        open={stopConfirmOpen}
+        onClose={() => setStopConfirmOpen(false)}
+        aria-labelledby="stop-dialog-title"
+        aria-describedby="stop-dialog-description"
+      >
+        <DialogTitle id="stop-dialog-title">
+          Timer entry opslaan
+        </DialogTitle>
+        <DialogContent>
+          <Box id="stop-dialog-description">
+            <DialogContentText sx={{ mb: 2 }}>
+              Wil je de getimede tijd opslaan?
+            </DialogContentText>
+            <Paper sx={{ p: 2, backgroundColor: "action.hover", mb: 2 }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="body2" color="text.secondary">Getimede tijd:</Typography>
+                  <Typography variant="body2" fontWeight="bold" color="secondary.main">
+                    {formatTime(timerState.elapsedSeconds)}
+                  </Typography>
+                </Box>
+                {selectedClient && (
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="body2" color="text.secondary">Klant:</Typography>
+                    <Typography variant="body2" fontWeight="medium">{selectedClient.name}</Typography>
+                  </Box>
+                )}
+                {selectedProject && (
+                  <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                    <Typography variant="body2" color="text.secondary">Project:</Typography>
+                    <Typography variant="body2" fontWeight="medium">{selectedProject.name}</Typography>
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setStopConfirmOpen(false)}
+            color="primary"
+            variant="outlined"
+          >
+            Annuleren
+          </Button>
+          <Button
+            onClick={handleStopAndSave}
+            color="primary"
+            variant="contained"
+            startIcon={<Square size={18} />}
+            autoFocus
+          >
+            Opslaan
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Reset Confirmation Dialog */}
       <Dialog

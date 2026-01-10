@@ -99,6 +99,11 @@ export async function createProject(formData: FormData) {
   const defaultUnit = (formData.get("default_unit") as string) || "minutes";
   const roundingRule = (formData.get("rounding_rule") as string) || "none";
 
+  // Validate name length
+  if (name && name.trim().length > 20) {
+    throw new Error("Project naam mag maximaal 20 karakters bevatten");
+  }
+
   const { error } = await supabase.from("projects").insert({
     owner_user_id: user.id,
     client_id: clientId,
@@ -132,6 +137,11 @@ export async function updateProject(id: string, formData: FormData) {
     : null;
   const defaultUnit = (formData.get("default_unit") as string) || "minutes";
   const roundingRule = (formData.get("rounding_rule") as string) || "none";
+
+  // Validate name length
+  if (name && name.trim().length > 20) {
+    throw new Error("Project naam mag maximaal 20 karakters bevatten");
+  }
 
   const { error } = await supabase
     .from("projects")
@@ -238,4 +248,3 @@ export async function getProjectsWithStats() {
     };
   });
 }
-

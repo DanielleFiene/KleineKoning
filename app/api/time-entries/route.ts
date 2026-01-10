@@ -59,6 +59,14 @@ export async function POST(req: NextRequest) {
 
       const { client_id, project_id, date, description, duration_value, duration_unit } = body;
 
+      // Validate description length
+      if (description && description.trim().length > 75) {
+        return NextResponse.json(
+          { error: "Omschrijving mag maximaal 75 karakters bevatten" },
+          { status: 400 }
+        );
+      }
+
       // Get project to check rounding rule
       const { data: project } = await supabase
         .from("projects")

@@ -96,6 +96,11 @@ export function TimerStopDialog({
       return;
     }
 
+    if (description.trim().length > 75) {
+      toast.showWarning("Omschrijving mag maximaal 75 karakters bevatten");
+      return;
+    }
+
     onSave({
       date,
       description: description.trim(),
@@ -175,10 +180,30 @@ export function TimerStopDialog({
             label="Omschrijving"
             type="text"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => {
+              const newValue = e.target.value;
+              if (newValue.length <= 75) {
+                setDescription(newValue);
+              } else {
+                // Show warning if trying to exceed limit
+                toast.showWarning("Omschrijving mag maximaal 75 karakters bevatten");
+              }
+            }}
             placeholder="Wat heb je gedaan?"
             fullWidth
             required
+            inputProps={{ maxLength: 75 }}
+            helperText={
+              <Typography
+                component="span"
+                sx={{
+                  fontWeight: description.length >= 75 ? "bold" : "normal",
+                  color: description.length >= 75 ? "error.main" : "text.secondary",
+                }}
+              >
+                {description.length}/75 karakters
+              </Typography>
+            }
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
