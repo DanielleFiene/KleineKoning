@@ -1,5 +1,9 @@
-// lib/utils/pdf-html.ts
-// HTML template generator for PDF statements (Edge Runtime compatible)
+/**
+ * lib/utils/pdf-html.ts
+ * 
+ * HTML template generator voor PDF urenstaten. Genereert HTML templates die kunnen worden
+ * gebruikt voor PDF generatie. Edge Runtime compatible (geen browser-only APIs).
+ */
 
 function formatDate(dateStr: string): string {
   try {

@@ -1,4 +1,9 @@
-// app/(dashboard)/projects/[id]/page.tsx
+/**
+ * app/(dashboard)/projects/[id]/page.tsx
+ * 
+ * Project detail pagina. Toont projectgegevens inclusief tarief, unit en afrondingsregel.
+ * Server component met Edge Runtime support.
+ */
 import { getProject } from "@/app/actions/projects";
 import {
   Container,
@@ -9,6 +14,9 @@ import {
 } from "@mui/material";
 import { Edit } from "lucide-react";
 import Link from "next/link";
+import { InfoIcon } from "@/components/info-icon";
+import { Box } from "@mui/material";
+import { formatUnit } from "@/lib/utils";
 
 export const runtime = 'edge';
 
@@ -57,18 +65,34 @@ export default async function ProjectDetailPage({
           </Typography>
           <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                Tarief (ex BTW)
-              </Typography>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Tarief (netto)
+                </Typography>
+                <InfoIcon title="Netto = exclusief BTW. Dit is het tarief zonder BTW." size="small" />
+              </Box>
               <Typography variant="body1">
                 {project.rate_ex_btw ? `€${project.rate_ex_btw.toFixed(2)}` : "Niet ingesteld"}
               </Typography>
             </Box>
+            {(project as any).clients?.btw_profile?.percentage > 0 && project.rate_ex_btw && (
+              <Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Tarief (bruto)
+                  </Typography>
+                  <InfoIcon title="Bruto = inclusief BTW. Dit is het tarief met BTW erbij." size="small" />
+                </Box>
+                <Typography variant="body1">
+                  €{(project.rate_ex_btw * (1 + (project as any).clients.btw_profile.percentage / 100)).toFixed(2)}
+                </Typography>
+              </Box>
+            )}
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                 Standaard Unit
               </Typography>
-              <Typography variant="body1">{project.default_unit}</Typography>
+              <Typography variant="body1">{formatUnit(project.default_unit)}</Typography>
             </Box>
             <Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>

@@ -69,7 +69,7 @@ export async function getProject(id: string) {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("*, clients(name)")
+    .select("*, clients(name, btw_profile)")
     .eq("id", id)
     .eq("owner_user_id", user.id)
     .single();

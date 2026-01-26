@@ -37,12 +37,14 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Alert,
 } from "@mui/material";
 import { Copy, Download, Mail, Plus, Trash2 } from "lucide-react";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useToast } from "@/components/toast-provider";
+import { InfoIcon } from "@/components/info-icon";
 
 interface Client {
   id: string;
@@ -105,21 +107,38 @@ export function ExportsView({
       end = customEnd;
     }
 
+    // Format dates using local date components to avoid timezone issues
+    // toISOString() converts to UTC which can shift the date by one day
+    const formatLocalDate = (date: Date): string => {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    };
+
     return {
-      start: start.toISOString().split("T")[0],
-      end: end.toISOString().split("T")[0],
+      start: formatLocalDate(start),
+      end: formatLocalDate(end),
     };
   };
 
   const handlePreview = async () => {
     if (!selectedClient) {
-      alert("Selecteer een klant");
+      toast.showWarning("Selecteer een klant");
       return;
     }
 
     if (periodType === "custom" && (!customStart || !customEnd)) {
-      alert("Selecteer beide datums");
+      toast.showWarning("Selecteer beide datums");
       return;
+    }
+
+    // Validate that end date is not before start date
+    if (periodType === "custom" && customStart && customEnd) {
+      if (customEnd < customStart) {
+        toast.showError("Einddatum moet na of gelijk zijn aan de startdatum");
+        return;
+      }
     }
 
     const period = calculatePeriod();
@@ -137,7 +156,7 @@ export function ExportsView({
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Ophalen time entries mislukt");
+        throw new Error(err.error || "Ophalen tijdregistraties mislukt");
       }
 
       const { entries } = await res.json();
@@ -173,7 +192,7 @@ export function ExportsView({
 
       if (!createRes.ok) {
         const err = await createRes.json().catch(() => ({}));
-        throw new Error(err.error || "Statement aanmaken mislukt");
+        throw new Error(err.error || "Urenstaat aanmaken mislukt");
       }
 
       const { statement, client } = await createRes.json();
@@ -275,7 +294,7 @@ export function ExportsView({
         next.delete(id);
         return next;
       });
-      toast.showSuccess("Statement verwijderd");
+      toast.showSuccess("Urenstaat verwijderd");
     } catch (error: any) {
       toast.showError("Fout bij verwijderen: " + error.message);
     }
@@ -298,7 +317,7 @@ export function ExportsView({
       );
       setStatements(statements.filter((s) => !selectedStatements.has(s.id)));
       setSelectedStatements(new Set());
-      toast.showSuccess(`${count} statement(s) verwijderd`);
+      toast.showSuccess(`${count} urenstaat(en) verwijderd`);
     } catch (error: any) {
       toast.showError("Fout bij verwijderen: " + error.message);
     }
@@ -378,29 +397,58 @@ export function ExportsView({
 
             {periodType === "custom" && (
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={nl}>
-                <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                  <DatePicker
-                    label="Van"
-                    value={customStart}
-                    onChange={(newValue) => setCustomStart(newValue)}
-                    slotProps={{
-                      textField: {
-                        sx: { maxWidth: 200 },
-                      },
-                    }}
-                    format="d MMM yyyy"
-                  />
-                  <DatePicker
-                    label="Tot"
-                    value={customEnd}
-                    onChange={(newValue) => setCustomEnd(newValue)}
-                    slotProps={{
-                      textField: {
-                        sx: { maxWidth: 200 },
-                      },
-                    }}
-                    format="d MMM yyyy"
-                  />
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                  <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", alignItems: "flex-start" }}>
+                    <Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={500}>
+                          Van
+                        </Typography>
+                        <InfoIcon title="Startdatum van de periode. Deze datum is inclusief (entries van deze datum worden meegenomen)." size="small" />
+                      </Box>
+                      <DatePicker
+                        label="Van"
+                        value={customStart}
+                        onChange={(newValue) => setCustomStart(newValue)}
+                        slotProps={{
+                          textField: {
+                            sx: { maxWidth: 200 },
+                          },
+                        }}
+                        format="d MMM yyyy"
+                      />
+                    </Box>
+                    <Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                        <Typography variant="body2" fontWeight={500}>
+                          Tot
+                        </Typography>
+                        <InfoIcon title="Einddatum van de periode. Deze datum is inclusief (entries van deze datum worden meegenomen). Let op: als je meerdere periodes exporteert die overlappen, kunnen dezelfde entries in meerdere exports voorkomen." size="small" />
+                      </Box>
+                      <DatePicker
+                        label="Tot"
+                        value={customEnd}
+                        onChange={(newValue) => setCustomEnd(newValue)}
+                        minDate={customStart || undefined}
+                        slotProps={{
+                          textField: {
+                            sx: { maxWidth: 200 },
+                          },
+                        }}
+                        format="d MMM yyyy"
+                      />
+                    </Box>
+                  </Box>
+                  {customStart && customEnd && customEnd < customStart && (
+                    <Alert severity="error" sx={{ maxWidth: 400 }}>
+                      Einddatum moet na of gelijk zijn aan de startdatum
+                    </Alert>
+                  )}
+                  {customStart && customEnd && customEnd >= customStart && (
+                    <Alert severity="info" sx={{ maxWidth: 400 }}>
+                      Beide datums zijn inclusief. Export bevat entries van {format(customStart, "d MMMM yyyy", { locale: nl })} tot en met {format(customEnd, "d MMMM yyyy", { locale: nl })}.
+                    </Alert>
+                  )}
                 </Box>
               </LocalizationProvider>
             )}
@@ -438,29 +486,39 @@ export function ExportsView({
         </Paper>
 
         {/* Preview */}
-        {previewData && (
-          <Paper elevation={1} sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
-              Preview
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {previewData.client} - {format(new Date(previewData.period.start), "d MMM", { locale: nl })} tot{" "}
-              {format(new Date(previewData.period.end), "d MMM yyyy", { locale: nl })}
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <Box sx={{ p: 2, backgroundColor: "action.hover", borderRadius: 1 }}>
-                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Header</Typography>
-                <Typography variant="body2" color="text.primary">Klant: {previewData.client}</Typography>
-                <Typography variant="body2" color="text.primary">
-                  Periode: {format(new Date(previewData.period.start), "d MMM", { locale: nl })} -{" "}
-                  {format(new Date(previewData.period.end), "d MMM yyyy", { locale: nl })}
-                </Typography>
-                <Typography variant="body2" color="text.primary">Opgesteld op: {format(new Date(), "d MMMM yyyy", { locale: nl })}</Typography>
-              </Box>
+        {previewData && (() => {
+          const startDate = new Date(previewData.period.start);
+          const endDate = new Date(previewData.period.end);
+          const startYear = startDate.getFullYear();
+          const endYear = endDate.getFullYear();
+          
+          // Format start date: include year if different from end year, or if period spans year boundary
+          const startFormat = startYear !== endYear ? "d MMM yyyy" : "d MMM";
+          const endFormat = "d MMM yyyy";
+          
+          return (
+            <Paper elevation={1} sx={{ p: 3 }}>
+              <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
+                Preview
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {previewData.client} - {format(startDate, startFormat, { locale: nl })} tot{" "}
+                {format(endDate, endFormat, { locale: nl })}
+              </Typography>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <Box sx={{ p: 2, backgroundColor: "action.hover", borderRadius: 1 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>Header</Typography>
+                  <Typography variant="body2" color="text.primary">Klant: {previewData.client}</Typography>
+                  <Typography variant="body2" color="text.primary">
+                    Periode: {format(startDate, startFormat, { locale: nl })} -{" "}
+                    {format(endDate, endFormat, { locale: nl })}
+                  </Typography>
+                  <Typography variant="body2" color="text.primary">Opgesteld op: {format(new Date(), "d MMMM yyyy", { locale: nl })}</Typography>
+                </Box>
 
-              {Object.keys(entriesByDate).length === 0 ? (
+                {Object.keys(entriesByDate).length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
-                  Geen entries in deze periode
+                  Geen registraties in deze periode
                 </Typography>
               ) : (
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
@@ -544,7 +602,7 @@ export function ExportsView({
 
                           if (!res.ok) {
                             const err = await res.json().catch(() => ({}));
-                            throw new Error(err.error || "Ophalen time entries mislukt");
+                            throw new Error(err.error || "Ophalen tijdregistraties mislukt");
                           }
 
                           const { entries } = await res.json();
@@ -563,7 +621,7 @@ export function ExportsView({
 
                           if (!createRes.ok) {
                             const err = await createRes.json().catch(() => ({}));
-                            throw new Error(err.error || "Statement aanmaken mislukt");
+                            throw new Error(err.error || "Urenstaat aanmaken mislukt");
                           }
 
                           const { statement } = await createRes.json();
@@ -598,7 +656,7 @@ export function ExportsView({
 
                           if (!createRes.ok) {
                             const err = await createRes.json().catch(() => ({}));
-                            throw new Error(err.error || "Statement aanmaken mislukt");
+                            throw new Error(err.error || "Urenstaat aanmaken mislukt");
                           }
 
                           const { statement, client } = await createRes.json();
@@ -697,14 +755,15 @@ export function ExportsView({
                 )}
               </Box>
             </Box>
-          </Paper>
-        )}
+            </Paper>
+          );
+        })()}
 
         {/* Statement lijst */}
         <Paper elevation={1} sx={{ p: 3 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Gegenereerde Statements
+              Gegenereerde Urenstaten
             </Typography>
             {selectedStatements.size > 0 && (
               <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
@@ -717,7 +776,7 @@ export function ExportsView({
                   variant="outlined"
                                 startIcon={<Trash2 size={18} />}
                   onClick={() => {
-                    const message = `Weet je zeker dat je ${selectedStatements.size} statement(s) wilt verwijderen?\n\n⚠️ Let op: Deze actie kan niet ongedaan worden gemaakt. Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.`;
+                    const message = `Weet je zeker dat je ${selectedStatements.size} urenstaat(en) wilt verwijderen?\n\n⚠️ Let op: Deze actie kan niet ongedaan worden gemaakt. Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.`;
                     if (confirm(message)) {
                       handleBulkDelete();
                     }
@@ -730,7 +789,7 @@ export function ExportsView({
           </Box>
           {statements.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              Nog geen statements gegenereerd
+              Nog geen urenstaten gegenereerd
             </Typography>
           ) : (
             <TableContainer>
@@ -754,7 +813,7 @@ export function ExportsView({
                         size="small"
                       />
                     </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Statement #</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>Urenstaat #</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Klant</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Periode</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Aangemaakt op</TableCell>
@@ -1089,10 +1148,10 @@ export function ExportsView({
             setStatementToDelete(null);
           }}
         >
-          <DialogTitle>Statement verwijderen?</DialogTitle>
+          <DialogTitle>Urenstaat verwijderen?</DialogTitle>
           <DialogContent>
             <Typography sx={{ mb: 2 }}>
-              Weet je zeker dat je dit statement wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt en alle gegevens worden permanent verwijderd.
+              Weet je zeker dat je deze urenstaat wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt en alle gegevens worden permanent verwijderd.
             </Typography>
             <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600 }}>
               ⚠️ Let op: Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.

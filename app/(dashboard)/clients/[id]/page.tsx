@@ -1,4 +1,9 @@
-// app/(dashboard)/clients/[id]/page.tsx
+/**
+ * app/(dashboard)/clients/[id]/page.tsx
+ * 
+ * Client detail pagina. Toont klantgegevens en alle bijbehorende projecten.
+ * Server component met Edge Runtime support.
+ */
 import { getClient } from "@/app/actions/clients";
 import { getProjectsByClient } from "@/app/actions/projects";
 import {
@@ -17,6 +22,8 @@ import {
 } from "@mui/material";
 import { Plus, Edit } from "lucide-react";
 import Link from "next/link";
+import { InfoIcon } from "@/components/info-icon";
+import { formatUnit } from "@/lib/utils";
 
 export const runtime = 'edge';
 
@@ -66,6 +73,41 @@ export default async function ClientDetailPage({
           </Box>
         </Box>
 
+        {/* Client Tarief Card */}
+        {client.rate_ex_btw && (
+          <Paper elevation={1} sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Klant Tarief
+            </Typography>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Tarief (netto)
+                  </Typography>
+                  <InfoIcon title="Netto = exclusief BTW. Dit is het tarief zonder BTW." size="small" />
+                </Box>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  €{client.rate_ex_btw.toFixed(2)}
+                </Typography>
+              </Box>
+              {client.btw_profile.percentage > 0 && (
+                <Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Tarief (bruto)
+                    </Typography>
+                    <InfoIcon title="Bruto = inclusief BTW. Dit is het tarief met BTW erbij." size="small" />
+                  </Box>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    €{(client.rate_ex_btw * (1 + client.btw_profile.percentage / 100)).toFixed(2)}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Paper>
+        )}
+
         {/* Content Card */}
         <Paper elevation={1} sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
@@ -81,7 +123,20 @@ export default async function ClientDetailPage({
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 600 }}>Naam</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>Tarief (ex BTW)</TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                        Tarief (netto)
+                        <InfoIcon title="Netto = exclusief BTW. Dit is het tarief zonder BTW." size="small" />
+                      </Box>
+                    </TableCell>
+                    {client.btw_profile.percentage > 0 && (
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                          Tarief (bruto)
+                          <InfoIcon title="Bruto = inclusief BTW. Dit is het tarief met BTW erbij." size="small" />
+                        </Box>
+                      </TableCell>
+                    )}
                     <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Afronding</TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>Acties</TableCell>
@@ -112,7 +167,14 @@ export default async function ClientDetailPage({
                           ? `€${project.rate_ex_btw.toFixed(2)}`
                           : "-"}
                       </TableCell>
-                      <TableCell>{project.default_unit}</TableCell>
+                      {client.btw_profile.percentage > 0 && (
+                        <TableCell align="right">
+                          {project.rate_ex_btw
+                            ? `€${(project.rate_ex_btw * (1 + client.btw_profile.percentage / 100)).toFixed(2)}`
+                            : "-"}
+                        </TableCell>
+                      )}
+                      <TableCell>{formatUnit(project.default_unit)}</TableCell>
                       <TableCell>{project.rounding_rule}</TableCell>
                       <TableCell>
                         <Link href={`/projects/${project.id}/edit`} style={{ textDecoration: "none" }}>

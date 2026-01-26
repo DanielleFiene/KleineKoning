@@ -49,6 +49,7 @@ interface TimerState {
   lastSaved?: number; // Timestamp when timer was last saved (prevents duplicate saves)
   ownerTabId?: string; // ID of the tab that owns/started the timer
   manuallyPaused?: boolean; // True if timer was manually paused (not by tab close)
+  lastSetupUpdate?: number; // Timestamp when setup (client/project/description) was last updated
 }
 
 const TIMER_STORAGE_KEY = "kleinekoning_timer";
@@ -124,6 +125,76 @@ export function Timer({
   });
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Check if owner tab still exists and take ownership if needed
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const checkAndTakeOwnership = () => {
+      const saved = localStorage.getItem(TIMER_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // If timer is running and has an owner that's not this tab
+          if (parsed.isRunning && parsed.ownerTabId && parsed.ownerTabId !== tabId) {
+            // Check if owner tab still exists by checking if we can find it in BroadcastChannel
+            // If all tabs were closed, sessionStorage would be empty, so owner doesn't exist
+            // Simple check: if ownerTabId doesn't match any active tab, take ownership
+            // We'll use a simpler approach: if timer is running but owner tab is gone, take ownership
+            // This happens when all tabs are closed and a new one opens
+            
+            // Use BroadcastChannel to check if owner exists
+            try {
+              const checkChannel = new BroadcastChannel("kleinekoning_timer");
+              let ownerFound = false;
+              
+              // Listen briefly for any message from owner tab
+              const timeout = setTimeout(() => {
+                if (!ownerFound) {
+                  // Owner didn't respond - assume it doesn't exist
+                  console.log("[Timer] Owner tab not found, taking ownership");
+                  const updatedState = {
+                    ...parsed,
+                    ownerTabId: tabId,
+                  };
+                  localStorage.setItem(TIMER_STORAGE_KEY, JSON.stringify(updatedState));
+                  setTimerState((prev) => ({
+                    ...prev,
+                    ownerTabId: tabId,
+                  }));
+                }
+                checkChannel.close();
+              }, 500);
+              
+              // If we receive any message, owner exists
+              const handleAnyMessage = () => {
+                ownerFound = true;
+                clearTimeout(timeout);
+              };
+              
+              checkChannel.addEventListener("message", handleAnyMessage);
+              
+              setTimeout(() => {
+                checkChannel.removeEventListener("message", handleAnyMessage);
+                if (!ownerFound) {
+                  clearTimeout(timeout);
+                }
+              }, 1000);
+            } catch {
+              // BroadcastChannel not supported - use simpler check
+              // If this is a fresh tab (no sessionStorage), owner doesn't exist
+              // But we can't reliably check this, so we'll allow pause in handlePause instead
+            }
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    };
+    
+    // Check on mount
+    checkAndTakeOwnership();
+  }, [tabId]);
 
   // Save state to localStorage and broadcast updates
   // Skip saving if state is being reset (empty state)
@@ -273,61 +344,87 @@ export function Timer({
   useEffect(() => {
     if (typeof window === "undefined") return;
     
-    const handleTimerSetupUpdate = () => {
-      const saved = localStorage.getItem(TIMER_STORAGE_KEY);
-      if (saved) {
+    const handleTimerSetupUpdate = (event: Event) => {
+      // Get data from event detail if available (newer approach) or from localStorage (fallback)
+      const customEvent = event as CustomEvent;
+      const updatedData = customEvent.detail;
+      
+      const saved = updatedData || localStorage.getItem(TIMER_STORAGE_KEY);
+      let parsed;
+      
+      if (updatedData) {
+        // Use data directly from event (already parsed)
+        parsed = updatedData;
+      } else if (typeof saved === "string") {
+        // Parse from localStorage string
         try {
-          const parsed = JSON.parse(saved);
-          console.log("[Timer] Timer setup updated, new data:", parsed);
-          // Always update when timer is not running, or if timer is running but we're not the owner
-          setTimerState((prev) => {
-            // Only skip update if this tab owns a running timer (don't interrupt running timer)
-            if (prev.isRunning && prev.ownerTabId === tabId) {
-              console.log("[Timer] Timer is running and we own it, not updating");
-              return prev; // Don't update if this tab owns a running timer
-            }
-            
-            // Timer is not running OR we're not the owner - safe to update
-            console.log("[Timer] Updating timer state (timer not running or not owner)");
-            
-            // Check if client/project changed - if so, clear sessions
-            const clientChanged = prev.clientId !== parsed.clientId;
-            const projectChanged = prev.projectId !== parsed.projectId;
-            
-            console.log("[Timer] Updating timer state:", {
-              clientChanged,
-              projectChanged,
-              newClientId: parsed.clientId,
-              newProjectId: parsed.projectId,
-              newDescription: parsed.description,
-              currentIsRunning: prev.isRunning,
-            });
-            
-            // Update clientId, projectId, description from localStorage
-            // Always use the new values from localStorage (use nullish coalescing to handle null/undefined, but keep empty strings)
-            // If client or project changed, also clear sessions to prevent mixing old/new data
-            return {
-              ...prev,
-              clientId: parsed.clientId ?? null,
-              projectId: parsed.projectId ?? null,
-              description: parsed.description ?? "",
-              // Clear sessions if client/project changed (prevents old sessions from being saved with new client/project)
-              sessions: (clientChanged || projectChanged) ? [] : (parsed.sessions || prev.sessions || []),
-              // Also reset elapsed time if client/project changed
-              elapsedSeconds: (clientChanged || projectChanged) ? 0 : prev.elapsedSeconds,
-            };
-          });
+          parsed = JSON.parse(saved);
         } catch (e) {
           console.error("[Timer] Error parsing localStorage:", e);
+          return;
         }
       } else {
-        console.log("[Timer] No saved timer data found");
+        return;
       }
+      
+      console.log("[Timer] Timer setup updated, new data:", parsed);
+      
+      // Always update when timer is not running, or if timer is running but we're not the owner
+      setTimerState((prev) => {
+        // Only skip update if this tab owns a running timer (don't interrupt running timer)
+        if (prev.isRunning && prev.ownerTabId === tabId) {
+          console.log("[Timer] Timer is running and we own it, not updating");
+          return prev; // Don't update if this tab owns a running timer
+        }
+        
+        // Check if this update is newer than what we have
+        // If we have a lastSetupUpdate timestamp, compare it
+        const prevLastUpdate = (prev as any).lastSetupUpdate || 0;
+        const newLastUpdate = parsed.lastSetupUpdate || Date.now();
+        
+        // If new update is older than what we have, don't overwrite (unless timer is stopped)
+        if (!prev.isRunning && newLastUpdate < prevLastUpdate) {
+          console.log("[Timer] Update is older than current state, skipping");
+          return prev;
+        }
+        
+        // Timer is not running OR we're not the owner - safe to update
+        console.log("[Timer] Updating timer state (timer not running or not owner)");
+        
+        // Check if client/project changed - if so, clear sessions
+        const clientChanged = prev.clientId !== parsed.clientId;
+        const projectChanged = prev.projectId !== parsed.projectId;
+        
+        console.log("[Timer] Updating timer state:", {
+          clientChanged,
+          projectChanged,
+          newClientId: parsed.clientId,
+          newProjectId: parsed.projectId,
+          newDescription: parsed.description,
+          currentIsRunning: prev.isRunning,
+          lastSetupUpdate: newLastUpdate,
+        });
+        
+        // Update clientId, projectId, description from parsed data
+        // Always use the new values (use nullish coalescing to handle null/undefined, but keep empty strings)
+        // If client or project changed, also clear sessions to prevent mixing old/new data
+        return {
+          ...prev,
+          clientId: parsed.clientId ?? null,
+          projectId: parsed.projectId ?? null,
+          description: parsed.description ?? "",
+          lastSetupUpdate: newLastUpdate, // Store timestamp
+          // Clear sessions if client/project changed (prevents old sessions from being saved with new client/project)
+          sessions: (clientChanged || projectChanged) ? [] : (parsed.sessions || prev.sessions || []),
+          // Also reset elapsed time if client/project changed
+          elapsedSeconds: (clientChanged || projectChanged) ? 0 : prev.elapsedSeconds,
+        };
+      });
     };
     
-    window.addEventListener("timerSetupUpdated", handleTimerSetupUpdate);
+    window.addEventListener("timerSetupUpdated", handleTimerSetupUpdate as EventListener);
     return () => {
-      window.removeEventListener("timerSetupUpdated", handleTimerSetupUpdate);
+      window.removeEventListener("timerSetupUpdated", handleTimerSetupUpdate as EventListener);
     };
   }, [tabId]);
 
@@ -648,24 +745,28 @@ export function Timer({
     if (!timerState.isRunning) return;
     
     // CRITICAL: Only the owner tab can pause the timer
+    // But if owner doesn't exist (checked on mount), we should be the owner now
     if (timerState.ownerTabId && timerState.ownerTabId !== tabId) {
-      toast.showWarning("Alleen de tab waar de timer is gestart kan deze pauzeren");
-      return;
-    }
-    
-    // Double-check in localStorage (prevent race conditions)
-    if (typeof window !== "undefined") {
+      // Double-check in localStorage - owner might have been updated by mount effect
       const saved = localStorage.getItem(TIMER_STORAGE_KEY);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed.isRunning && parsed.ownerTabId && parsed.ownerTabId !== tabId) {
+          // If localStorage shows we're now the owner, proceed
+          if (parsed.ownerTabId === tabId) {
+            // We're the owner now, continue with pause
+          } else if (parsed.ownerTabId && parsed.ownerTabId !== tabId) {
+            // Owner still exists and it's not us
             toast.showWarning("Alleen de tab waar de timer is gestart kan deze pauzeren");
             return;
           }
         } catch {
           // Ignore parse errors
         }
+      } else {
+        // No saved state - shouldn't happen if timer is running
+        toast.showWarning("Timer status niet gevonden");
+        return;
       }
     }
     
@@ -1130,7 +1231,7 @@ export function Timer({
         aria-describedby="stop-dialog-description"
       >
         <DialogTitle id="stop-dialog-title">
-          Timer entry opslaan
+          Tijdregistratie opslaan
         </DialogTitle>
         <DialogContent>
           <Box id="stop-dialog-description">

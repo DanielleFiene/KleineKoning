@@ -20,6 +20,7 @@ import {
   MenuItem,
   Button,
   CircularProgress,
+  Link,
 } from "@mui/material";
 import { InfoIcon } from "@/components/info-icon";
 import { useRouter } from "next/navigation";
@@ -39,10 +40,30 @@ interface ClientFormProps {
 }
 
 const btwProfiles = [
-  { label: "Geen BTW", percentage: 0, rule: "none" },
-  { label: "BTW 0%", percentage: 0, rule: "zero" },
-  { label: "BTW 9%", percentage: 9, rule: "low" },
-  { label: "BTW 21%", percentage: 21, rule: "standard" },
+  { 
+    label: "Geen BTW", 
+    percentage: 0, 
+    rule: "none",
+    description: "Voor particulieren of klanten die niet BTW-plichtig zijn. Geen BTW wordt berekend of getoond."
+  },
+  { 
+    label: "BTW 0% (verlegd/export)", 
+    percentage: 0, 
+    rule: "zero",
+    description: "Voor internationale klanten, export of verlegde BTW. BTW-tarief is 0% maar moet wel worden vermeld op facturen."
+  },
+  { 
+    label: "BTW 9%", 
+    percentage: 9, 
+    rule: "low",
+    description: "Laag BTW-tarief (9%) voor bepaalde diensten zoals voedingsmiddelen, boeken, medicijnen, en openbaar vervoer."
+  },
+  { 
+    label: "BTW 21%", 
+    percentage: 21, 
+    rule: "standard",
+    description: "Standaard BTW-tarief (21%) voor de meeste diensten en producten."
+  },
 ];
 
 function SubmitButton({ isEdit }: { isEdit: boolean }) {
@@ -145,13 +166,21 @@ export function ClientForm({ client }: ClientFormProps) {
         </Box>
 
         <Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.5, flexWrap: "wrap" }}>
             <Typography variant="body2" fontWeight={500}>
               BTW Profiel
             </Typography>
-            <InfoIcon title="Selecteer het BTW-profiel voor deze klant. Dit bepaalt welk BTW-percentage wordt gebruikt in berekeningen." size="small" />
+            <InfoIcon title="Selecteer het BTW-profiel voor deze klant. Dit bepaalt welk BTW-percentage wordt gebruikt in berekeningen. Zie 'Meer uitleg' voor uitgebreide informatie over wanneer je welk tarief gebruikt." size="small" />
+            <Link 
+              href="/btw-uitleg" 
+              target="_blank" 
+              rel="noopener"
+              sx={{ fontSize: "0.75rem", ml: 0.5 }}
+            >
+              (Meer uitleg)
+            </Link>
           </Box>
-          <FormControl fullWidth sx={{ maxWidth: 400 }}>
+          <FormControl fullWidth sx={{ maxWidth: { xs: "100%", sm: 400 } }}>
             <InputLabel id="btw-profile-label">BTW Profiel</InputLabel>
             <Select
               labelId="btw-profile-label"
@@ -161,8 +190,28 @@ export function ClientForm({ client }: ClientFormProps) {
               onChange={(e) => setSelectedProfileIndex(parseInt(e.target.value))}
             >
               {btwProfiles.map((profile, index) => (
-                <MenuItem key={index} value={index.toString()}>
-                  {profile.label} ({profile.percentage}%)
+                <MenuItem key={index} value={index.toString()} sx={{ whiteSpace: "normal", py: 1.5 }}>
+                  <Box sx={{ width: "100%", display: "flex", flexDirection: "column", gap: 0.5 }}>
+                    <Typography variant="body2" fontWeight={500}>
+                      {profile.label} ({profile.percentage}%)
+                    </Typography>
+                    <Typography 
+                      variant="caption" 
+                      color="text.secondary" 
+                      sx={{ 
+                        fontSize: "0.7rem",
+                        lineHeight: 1.4,
+                        display: "block"
+                      }}
+                    >
+                      {profile.description.split(/\.\s+/).map((sentence, idx, arr) => (
+                        <span key={idx}>
+                          {sentence}{idx < arr.length - 1 ? "." : ""}
+                          {idx < arr.length - 1 && <br />}
+                        </span>
+                      ))}
+                    </Typography>
+                  </Box>
                 </MenuItem>
               ))}
             </Select>

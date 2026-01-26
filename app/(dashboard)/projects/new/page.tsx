@@ -1,4 +1,9 @@
-// app/(dashboard)/projects/new/page.tsx
+/**
+ * app/(dashboard)/projects/new/page.tsx
+ * 
+ * Nieuw project aanmaken pagina. Toont formulier voor het toevoegen van een nieuw project.
+ * Ondersteunt pre-selectie van klant via query parameter. Server component met Edge Runtime support.
+ */
 import { getClients } from "@/app/actions/clients";
 import { Container, Box, Typography } from "@mui/material";
 import { ProjectForm } from "@/components/project-form";

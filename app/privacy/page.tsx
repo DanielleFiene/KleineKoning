@@ -107,6 +107,7 @@ export default function PrivacyPage() {
                   <li>Projectgegevens (naam, tarieven, afrondingsregels)</li>
                   <li>Tijdregistraties (datum, beschrijving, duur)</li>
                   <li>Urenstaten (PDF exports)</li>
+                  <li>Inkomstenoverzichten (berekend op basis van tijdregistraties en projecttarieven)</li>
                 </Typography>
               </Box>
 
@@ -147,7 +148,7 @@ export default function PrivacyPage() {
                   <li>Recht op inzage: u kunt al uw gegevens inzien in de applicatie</li>
                   <li>Recht op rectificatie: u kunt uw gegevens zelf aanpassen (klanten, projecten, tijdregistraties)</li>
                   <li>Recht op verwijdering: u kunt individuele gegevens verwijderen via de applicatie. Voor volledige accountverwijdering kunt u contact met ons opnemen via <Link href="mailto:info@dfdigital.eu" color="primary">info@dfdigital.eu</Link></li>
-                  <li>Recht op dataportabiliteit: u kunt uw gegevens exporteren via de exports functionaliteit</li>
+                  <li>Recht op dataportabiliteit: u kunt uw gegevens exporteren via de exports functionaliteit (urenstaten en inkomstenoverzichten)</li>
                   <li>Recht op bezwaar: u kunt bezwaar maken tegen verwerking door contact met ons op te nemen via <Link href="mailto:info@dfdigital.eu" color="primary">info@dfdigital.eu</Link></li>
                 </Typography>
               </Box>

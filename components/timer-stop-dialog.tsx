@@ -127,7 +127,7 @@ export function TimerStopDialog({
 
   return (
     <Dialog open={open} onClose={() => onOpenChange(false)} maxWidth="sm" fullWidth>
-      <DialogTitle>Timer entry opslaan</DialogTitle>
+      <DialogTitle>Tijdregistratie opslaan</DialogTitle>
       <DialogContent>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 3, pt: 2 }}>
           <Paper sx={{ p: 2, backgroundColor: "action.hover" }}>
@@ -232,7 +232,7 @@ export function TimerStopDialog({
                   Opslaan voor deze dag (later exporteren)
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
-                  De entry wordt opgeslagen maar niet direct toegevoegd aan de tijdregistratie. Je kunt deze later exporteren.
+                  De registratie wordt opgeslagen maar niet direct toegevoegd aan de tijdregistratie. Je kunt deze later exporteren.
                 </Typography>
               </Box>
             }

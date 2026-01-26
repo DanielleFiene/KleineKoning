@@ -41,6 +41,7 @@ import {
 } from "@mui/material";
 import { Edit, Trash2, Plus, Search, Download, Filter, Info } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
+import { InfoIcon } from "@/components/info-icon";
 
 interface Client {
   id: string;
@@ -319,7 +320,18 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Naam</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>BTW Profiel</TableCell>
-                <TableCell sx={{ fontWeight: 600 }}>Tarief</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    Tarief (netto)
+                    <InfoIcon title="Netto = exclusief BTW. Dit is het tarief zonder BTW." size="small" />
+                  </Box>
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    Tarief (bruto)
+                    <InfoIcon title="Bruto = inclusief BTW. Dit is het tarief met BTW erbij. Alleen zichtbaar als er een BTW percentage is ingesteld." size="small" />
+                  </Box>
+                </TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>Projecten</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>Uren</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Laatste Activiteit</TableCell>
@@ -360,6 +372,17 @@ export function ClientSearch({ initialClients }: { initialClients: Client[] }) {
                     {client.rate_ex_btw ? (
                       <Typography variant="body2" fontWeight="medium">
                         €{client.rate_ex_btw.toFixed(2)}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        -
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {client.rate_ex_btw && client.btw_profile.percentage > 0 ? (
+                      <Typography variant="body2" fontWeight="medium">
+                        €{(client.rate_ex_btw * (1 + client.btw_profile.percentage / 100)).toFixed(2)}
                       </Typography>
                     ) : (
                       <Typography variant="body2" color="text.secondary">

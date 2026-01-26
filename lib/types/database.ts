@@ -1,4 +1,9 @@
-// lib/types/database.ts
+/**
+ * lib/types/database.ts
+ * 
+ * TypeScript type definities voor Supabase database schema. Auto-generated types
+ * voor type-safe database queries en updates. Bevat alle tabel definities en relaties.
+ */
 export type Json =
   | string
   | number

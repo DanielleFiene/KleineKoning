@@ -1,4 +1,9 @@
-// app/(dashboard)/projects/[id]/edit/page.tsx
+/**
+ * app/(dashboard)/projects/[id]/edit/page.tsx
+ * 
+ * Project edit pagina. Toont formulier voor het bewerken van projectgegevens.
+ * Server component met Edge Runtime support.
+ */
 import { getProject, getProjects } from "@/app/actions/projects";
 import { getClients } from "@/app/actions/clients";
 import { Container, Box, Typography } from "@mui/material";

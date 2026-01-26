@@ -1,3 +1,9 @@
+/**
+ * components/info-icon.tsx
+ * 
+ * Herbruikbare info icon component met tooltip. Toont informatie iconen met
+ * custom styling en hover effecten voor uitleg bij formuliervelden.
+ */
 "use client";
 
 import { Tooltip, IconButton, Box } from "@mui/material";

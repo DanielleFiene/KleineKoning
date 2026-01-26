@@ -1,4 +1,9 @@
-// app/(dashboard)/clients/[id]/edit/page.tsx
+/**
+ * app/(dashboard)/clients/[id]/edit/page.tsx
+ * 
+ * Client edit pagina. Toont formulier voor het bewerken van klantgegevens.
+ * Server component met Edge Runtime support.
+ */
 import { getClient } from "@/app/actions/clients";
 import { Container, Box, Typography } from "@mui/material";
 import { ClientForm } from "@/components/client-form";

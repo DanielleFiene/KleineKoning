@@ -1,3 +1,9 @@
+/**
+ * components/label-with-info.tsx
+ * 
+ * Label component met geïntegreerde info icon. Combineert een label tekst met
+ * een info icon voor extra uitleg bij formuliervelden.
+ */
 "use client";
 
 import { Box } from "@mui/material";

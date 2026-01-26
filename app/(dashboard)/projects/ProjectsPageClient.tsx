@@ -43,10 +43,10 @@ export default function ProjectsPageClient() {
         setClients(clientsData || []);
       }
 
-      // Get all projects with client info
+      // Get all projects with client info including BTW profile
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
-        .select("*, clients(name)")
+        .select("*, clients(name, btw_profile)")
         .eq("owner_user_id", user.id)
         .order("name");
 

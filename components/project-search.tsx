@@ -40,6 +40,8 @@ import {
 } from "@mui/material";
 import { Edit, Trash2, Search, Download, Filter } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
+import { InfoIcon } from "@/components/info-icon";
+import { formatUnit } from "@/lib/utils";
 
 interface Project {
   id: string;
@@ -48,7 +50,12 @@ interface Project {
   default_unit: string;
   rounding_rule: string;
   client_id: string;
-  clients?: { name: string } | null;
+  clients?: { 
+    name: string;
+    btw_profile?: {
+      percentage: number;
+    };
+  } | null;
   totalHours?: number;
   lastActivity?: Date | string | null;
 }
@@ -204,13 +211,18 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
 
   const handleExportCSV = () => {
     const csvRows = [];
-    csvRows.push(["Naam", "Klant", "Tarief (ex BTW)", "Unit", "Afronding", "Totaal Uren", "Laatste Activiteit"]);
+    csvRows.push(["Naam", "Klant", "Tarief (netto)", "Tarief (bruto)", "Unit", "Afronding", "Totaal Uren", "Laatste Activiteit"]);
     filteredAndSortedProjects.forEach((project) => {
+      const btwPercentage = project.clients?.btw_profile?.percentage || 0;
+      const rateBruto = project.rate_ex_btw && btwPercentage > 0
+        ? project.rate_ex_btw * (1 + btwPercentage / 100)
+        : null;
       csvRows.push([
         project.name,
         project.clients?.name || "-",
         project.rate_ex_btw ? `€${project.rate_ex_btw.toFixed(2)}` : "-",
-        project.default_unit,
+        rateBruto ? `€${rateBruto.toFixed(2)}` : "-",
+        formatUnit(project.default_unit),
         project.rounding_rule,
         (project.totalHours || 0).toFixed(2),
         project.lastActivity ? format(new Date(project.lastActivity), "d MMM yyyy", { locale: nl }) : "Nooit",
@@ -310,7 +322,7 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
             <MenuItem value="all">Alle units</MenuItem>
             {units.map((unit) => (
               <MenuItem key={unit} value={unit}>
-                {unit}
+                {formatUnit(unit)}
               </MenuItem>
             ))}
           </Select>
@@ -364,7 +376,18 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Naam</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Klant</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 600 }}>Tarief</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                    Tarief (netto)
+                    <InfoIcon title="Netto = exclusief BTW. Dit is het tarief zonder BTW." size="small" />
+                  </Box>
+                </TableCell>
+                <TableCell align="right" sx={{ fontWeight: 600 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                    Tarief (bruto)
+                    <InfoIcon title="Bruto = inclusief BTW. Dit is het tarief met BTW erbij. Alleen zichtbaar als er een BTW percentage is ingesteld." size="small" />
+                  </Box>
+                </TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Unit</TableCell>
                 <TableCell sx={{ fontWeight: 600 }}>Afronding</TableCell>
                 <TableCell align="right" sx={{ fontWeight: 600 }}>Uren</TableCell>
@@ -420,8 +443,19 @@ export function ProjectSearch({ initialProjects, clients }: { initialProjects: P
                       </Typography>
                     )}
                   </TableCell>
+                  <TableCell align="right">
+                    {project.rate_ex_btw && project.clients?.btw_profile?.percentage && project.clients.btw_profile.percentage > 0 ? (
+                      <Typography variant="body2" fontWeight="medium">
+                        €{(project.rate_ex_btw * (1 + project.clients.btw_profile.percentage / 100)).toFixed(2)}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        -
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell>
-                    <Chip label={project.default_unit} size="small" variant="outlined" />
+                    <Chip label={formatUnit(project.default_unit)} size="small" variant="outlined" />
                   </TableCell>
                   <TableCell>
                     <Chip label={project.rounding_rule} size="small" variant="outlined" color="secondary" />

@@ -1,4 +1,9 @@
-// app/(dashboard)/clients/new/page.tsx
+/**
+ * app/(dashboard)/clients/new/page.tsx
+ * 
+ * Nieuwe client aanmaken pagina. Toont formulier voor het toevoegen van een nieuwe klant.
+ * Server component.
+ */
 import { Container, Box, Typography } from "@mui/material";
 import { ClientForm } from "@/components/client-form";
 

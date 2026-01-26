@@ -432,7 +432,7 @@ export function TimeEntriesView({
 
   const handleBulkDeleteEntries = async () => {
     if (selectedEntries.size === 0) return;
-    const message = `Weet je zeker dat je ${selectedEntries.size} entry(s) wilt verwijderen?\n\n⚠️ Let op: Deze actie kan niet ongedaan worden gemaakt. Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.`;
+    const message = `Weet je zeker dat je ${selectedEntries.size} registratie(s) wilt verwijderen?\n\n⚠️ Let op: Deze actie kan niet ongedaan worden gemaakt. Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.`;
     if (!confirm(message)) {
       return;
     }
@@ -451,7 +451,7 @@ export function TimeEntriesView({
       setEntries(entries.filter((e) => !selectedEntries.has(e.id)));
       const count = selectedEntries.size;
       setSelectedEntries(new Set());
-      toast.showSuccess(`${count} entry(s) verwijderd`);
+      toast.showSuccess(`${count} registratie(s) verwijderd`);
       router.refresh();
     } catch (error) {
       toast.showError("Fout bij verwijderen: " + (error as Error).message);
@@ -752,10 +752,12 @@ export function TimeEntriesView({
           sessions: [],
         };
       }
+      // Add timestamp to track when setup was last updated
+      updated.lastSetupUpdate = Date.now();
       localStorage.setItem("kleinekoning_timer", JSON.stringify(updated));
       window.dispatchEvent(new Event("storage"));
-      // Also dispatch custom event for same-tab updates
-      window.dispatchEvent(new Event("timerSetupUpdated"));
+      // Also dispatch custom event for same-tab updates with the updated data
+      window.dispatchEvent(new CustomEvent("timerSetupUpdated", { detail: updated }));
     }
     setTimerSetupOpen(false);
   };
@@ -1085,7 +1087,7 @@ export function TimeEntriesView({
               },
             }}
           >
-            Nieuwe entry
+            Nieuwe registratie
           </Button>
         </Box>
       </Box>
@@ -1404,11 +1406,11 @@ export function TimeEntriesView({
                   <Typography variant="body2" fontWeight={500}>
                     Zoeken
                   </Typography>
-                  <InfoIcon title="Zoek in tijdentries op omschrijving, klantnaam of projectnaam. Gebruik Ctrl+F om snel te zoeken. De zoekresultaten worden direct gefilterd." size="small" />
+                  <InfoIcon title="Zoek in tijdregistraties op omschrijving, klantnaam of projectnaam. Gebruik Ctrl+F om snel te zoeken. De zoekresultaten worden direct gefilterd." size="small" />
                 </Box>
                 <TextField
                   id="entry-search"
-                  placeholder="Zoeken in entries... (Ctrl+F)"
+                  placeholder="Zoeken in registraties... (Ctrl+F)"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   InputProps={{
@@ -1424,7 +1426,7 @@ export function TimeEntriesView({
                     <Typography variant="body2" fontWeight={500}>
                       Filter op klant
                     </Typography>
-                    <InfoIcon title="Filter de tijdentries op een specifieke klant. Selecteer 'Alle klanten' om alle entries te zien." size="small" />
+                    <InfoIcon title="Filter de tijdregistraties op een specifieke klant. Selecteer 'Alle klanten' om alle registraties te zien." size="small" />
                   </Box>
                   <FormControl fullWidth>
                     <InputLabel>Klant</InputLabel>
@@ -1447,7 +1449,7 @@ export function TimeEntriesView({
                     <Typography variant="body2" fontWeight={500}>
                       Filter op project
                     </Typography>
-                    <InfoIcon title="Filter de tijdentries op een specifiek project. Dit is alleen beschikbaar als je eerst een klant selecteert." size="small" />
+                    <InfoIcon title="Filter de tijdregistraties op een specifiek project. Dit is alleen beschikbaar als je eerst een klant selecteert." size="small" />
                   </Box>
                   <FormControl fullWidth disabled={!filterClient || filterClient === "all"}>
                     <InputLabel>Project</InputLabel>
@@ -1754,7 +1756,7 @@ export function TimeEntriesView({
         setSelectedProject("");
         setSelectedClient("");
       }} maxWidth="sm" fullWidth>
-        <DialogTitle>{editingEntry ? "Entry bewerken" : "Nieuwe entry"}</DialogTitle>
+        <DialogTitle>{editingEntry ? "Registratie bewerken" : "Nieuwe registratie"}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
             Voeg een nieuwe tijdregistratie toe
@@ -1970,10 +1972,10 @@ export function TimeEntriesView({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onClose={() => { setDeleteConfirmOpen(false); setEntryToDelete(null); }}>
-        <DialogTitle>Entry verwijderen?</DialogTitle>
+        <DialogTitle>Registratie verwijderen?</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 2 }}>
-            Weet je zeker dat je deze entry wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt en alle gegevens worden permanent verwijderd.
+            Weet je zeker dat je deze registratie wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt en alle gegevens worden permanent verwijderd.
           </Typography>
           <Typography variant="body2" color="warning.main" sx={{ fontWeight: 600 }}>
             ⚠️ Let op: Controleer of je voldoet aan de bewaarplicht voor administratieve gegevens (minimaal 7 jaar voor de belastingdienst). Zorg voor een backup voordat je verwijdert.

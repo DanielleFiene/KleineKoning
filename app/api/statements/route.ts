@@ -64,9 +64,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const statementNumber = `ST-${String(nextNumber).padStart(4, "0")}`;
-
-    // Create statement
+    const statementNumber = `ST-${String(nextNumber).padStart(4, "0")}`;    // Create statement
     const { data: statement, error: statementError } = await supabase
       .from("statements")
       .insert({

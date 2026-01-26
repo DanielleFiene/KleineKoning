@@ -69,6 +69,11 @@ export function ProjectForm({
   const toast = useToast();
   const isEdit = !!project;
   const [projectName, setProjectName] = useState(project?.name || "");
+  const [rateExBtw, setRateExBtw] = useState<string>(
+    project?.rate_ex_btw !== null && project?.rate_ex_btw !== undefined 
+      ? project.rate_ex_btw.toString() 
+      : ""
+  );
 
   async function formAction(formData: FormData) {
     try {
@@ -184,8 +189,15 @@ export function ProjectForm({
             id="rate_ex_btw"
             name="rate_ex_btw"
             type="number"
+            value={rateExBtw}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Allow empty string or valid number
+              if (value === "" || (!isNaN(parseFloat(value)) && parseFloat(value) >= 0)) {
+                setRateExBtw(value);
+              }
+            }}
             inputProps={{ step: "0.01", min: "0" }}
-            defaultValue={project?.rate_ex_btw || ""}
             placeholder="0.00"
             fullWidth
           />
@@ -196,7 +208,7 @@ export function ProjectForm({
             <Typography variant="body2" fontWeight={500}>
               Standaard Unit <span style={{ color: "red" }}>*</span>
             </Typography>
-            <InfoIcon title="De standaard eenheid voor dit project. Wanneer je een tijdentry maakt voor dit project, wordt deze unit automatisch geselecteerd. Kies de unit die het meest gebruikt wordt voor dit project." size="small" />
+            <InfoIcon title="De standaard eenheid voor dit project. Wanneer je een tijdregistratie maakt voor dit project, wordt deze unit automatisch geselecteerd. Kies de unit die het meest gebruikt wordt voor dit project." size="small" />
           </Box>
           <FormControl fullWidth required sx={{ maxWidth: 400 }}>
             <InputLabel id="default-unit-label">Standaard Unit *</InputLabel>
@@ -221,7 +233,7 @@ export function ProjectForm({
             <Typography variant="body2" fontWeight={500}>
               Afrondingsregel <span style={{ color: "red" }}>*</span>
             </Typography>
-            <InfoIcon title="Hoe tijdentries worden afgerond bij het opslaan. Geen afronding: exacte tijd. Nearest15: naar dichtstbijzijnde 15 minuten. Up15: altijd naar boven naar 15 minuten. Down15: altijd naar beneden naar 15 minuten." size="small" />
+            <InfoIcon title="Hoe tijdregistraties worden afgerond bij het opslaan. Geen afronding: exacte tijd. Naar dichtstbijzijnde 15 min: naar dichtstbijzijnde 15 minuten. Naar boven (15 min): altijd naar boven naar 15 minuten. Naar beneden (15 min): altijd naar beneden naar 15 minuten." size="small" />
           </Box>
           <FormControl fullWidth required>
             <InputLabel id="rounding-rule-label">Afrondingsregel *</InputLabel>

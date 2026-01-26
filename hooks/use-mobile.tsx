@@ -1,4 +1,9 @@
-// hooks/use-mobile.tsx
+/**
+ * hooks/use-mobile.tsx
+ * 
+ * Custom React hook voor het detecteren van mobile viewport. Gebruikt window.matchMedia
+ * en resize events om responsive gedrag te bepalen. Returns boolean of undefined (initial load).
+ */
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768

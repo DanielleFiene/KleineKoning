@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   format,
@@ -64,6 +64,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useToast } from "@/components/toast-provider";
+import { InfoIcon } from "@/components/info-icon";
 import type { RevenueEntry } from "@/app/actions/revenue";
 
 export default function RevenuePageClient() {
@@ -438,7 +439,9 @@ export default function RevenuePageClient() {
 
   const totalHours = data.reduce((sum, e) => sum + e.totalHours, 0);
   const totalRevenue = data.reduce((sum, e) => sum + e.totalRevenue, 0);
+  const totalRevenueBruto = data.reduce((sum, e) => sum + e.totalRevenueBruto, 0);
   const clientsWithoutRevenue = data.filter((e) => e.totalRevenue === 0).length;
+  const hasAnyBtw = data.some((e) => e.btwPercentage > 0);
 
   return (
     <Container maxWidth="lg" sx={{ py: { xs: 2, sm: 3 } }}>
@@ -547,16 +550,24 @@ export default function RevenuePageClient() {
                       Totaal Uren
                     </TableCell>
                     <TableCell align="right" sx={{ fontWeight: "bold" }}>
-                      Inkomsten (ex BTW)
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                        Inkomsten (netto)
+                        <InfoIcon title="Netto = exclusief BTW. Dit is het bedrag zonder BTW." size="small" />
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: "bold" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                        Inkomsten (bruto)
+                        <InfoIcon title="Bruto = inclusief BTW. Dit is het bedrag met BTW erbij. Alleen zichtbaar als er een BTW percentage is ingesteld." size="small" />
+                      </Box>
                     </TableCell>
                     <TableCell width={60}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {data.map((entry) => (
-                    <>
+                    <React.Fragment key={entry.clientId}>
                       <TableRow
-                        key={entry.clientId}
                         hover
                         sx={{
                           backgroundColor:
@@ -588,6 +599,11 @@ export default function RevenuePageClient() {
                             ? formatCurrency(entry.totalRevenue)
                             : "-"}
                         </TableCell>
+                        <TableCell align="right" sx={{ fontWeight: "bold" }}>
+                          {entry.totalRevenueBruto > 0 && entry.btwPercentage > 0
+                            ? formatCurrency(entry.totalRevenueBruto)
+                            : "-"}
+                        </TableCell>
                         <TableCell>
                           {entry.projects.length > 0 && (
                             <IconButton
@@ -606,7 +622,7 @@ export default function RevenuePageClient() {
                       <TableRow>
                         <TableCell
                           style={{ paddingBottom: 0, paddingTop: 0 }}
-                          colSpan={4}
+                          colSpan={5}
                         >
                           <Collapse
                             in={expandedClients.has(entry.clientId)}
@@ -625,8 +641,30 @@ export default function RevenuePageClient() {
                                   <TableRow>
                                     <TableCell>Project</TableCell>
                                     <TableCell align="right">Uren</TableCell>
-                                    <TableCell align="right">Tarief (ex BTW)</TableCell>
-                                    <TableCell align="right">Inkomsten (ex BTW)</TableCell>
+                                    <TableCell align="right">
+                                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                                        Tarief (netto)
+                                        <InfoIcon title="Netto = exclusief BTW" size="small" />
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                                        Tarief (bruto)
+                                        <InfoIcon title="Bruto = inclusief BTW. Alleen zichtbaar als er een BTW percentage is ingesteld." size="small" />
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                                        Inkomsten (netto)
+                                        <InfoIcon title="Netto = exclusief BTW" size="small" />
+                                      </Box>
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                                        Inkomsten (bruto)
+                                        <InfoIcon title="Bruto = inclusief BTW. Alleen zichtbaar als er een BTW percentage is ingesteld." size="small" />
+                                      </Box>
+                                    </TableCell>
                                   </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -642,8 +680,18 @@ export default function RevenuePageClient() {
                                           : "-"}
                                       </TableCell>
                                       <TableCell align="right">
+                                        {project.rateIncBtw !== null && entry.btwPercentage > 0
+                                          ? formatCurrency(project.rateIncBtw)
+                                          : "-"}
+                                      </TableCell>
+                                      <TableCell align="right">
                                         {project.revenue > 0
                                           ? formatCurrency(project.revenue)
+                                          : "-"}
+                                      </TableCell>
+                                      <TableCell align="right">
+                                        {project.revenueBruto > 0 && entry.btwPercentage > 0
+                                          ? formatCurrency(project.revenueBruto)
                                           : "-"}
                                       </TableCell>
                                     </TableRow>
@@ -654,7 +702,7 @@ export default function RevenuePageClient() {
                           </Collapse>
                         </TableCell>
                       </TableRow>
-                    </>
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -680,13 +728,29 @@ export default function RevenuePageClient() {
                 </Typography>
               </Box>
               <Box sx={{ textAlign: "right" }}>
-                <Typography variant="body2" color="text.secondary">
-                  Totale Inkomsten (ex BTW)
-                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Totale Inkomsten (netto)
+                  </Typography>
+                  <InfoIcon title="Netto = exclusief BTW. Dit is het totaalbedrag zonder BTW." size="small" />
+                </Box>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: "primary.main" }}>
                   {formatCurrency(totalRevenue)}
                 </Typography>
               </Box>
+              {hasAnyBtw && (
+                <Box sx={{ textAlign: "right" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 0.5 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Totale Inkomsten (bruto)
+                    </Typography>
+                    <InfoIcon title="Bruto = inclusief BTW. Dit is het totaalbedrag met BTW erbij." size="small" />
+                  </Box>
+                  <Typography variant="h6" sx={{ fontWeight: 600, color: "secondary.main" }}>
+                    {formatCurrency(totalRevenueBruto)}
+                  </Typography>
+                </Box>
+              )}
               {clientsWithoutRevenue > 0 && (
                 <Box>
                   <Typography variant="body2" color="text.secondary">
