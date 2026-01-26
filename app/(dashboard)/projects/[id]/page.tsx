@@ -15,7 +15,6 @@ import {
 import { Edit } from "lucide-react";
 import Link from "next/link";
 import { InfoIcon } from "@/components/info-icon";
-import { Box } from "@mui/material";
 import { formatUnit } from "@/lib/utils";
 
 export const runtime = 'edge';

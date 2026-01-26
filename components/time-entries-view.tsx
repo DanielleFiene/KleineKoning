@@ -1736,7 +1736,7 @@ export function TimeEntriesView({
                   ) : (
                     <Box sx={{ py: 2, textAlign: "center" }}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic" }}>
-                        Geen entries voor deze dag
+                        Geen registraties voor deze dag
                       </Typography>
                     </Box>
                   )}
