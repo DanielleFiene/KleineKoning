@@ -8,9 +8,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
-import { ExportsView } from "@/components/exports-view";
 import { Box, CircularProgress } from "@mui/material";
+
+const ExportsView = dynamic(() => import("@/components/exports-view").then(mod => ({ default: mod.ExportsView })));
 
 export default function ExportsPageClient() {
   const [clients, setClients] = useState<any[]>([]);

@@ -8,11 +8,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
 import { Container, Box, Typography, Button, Paper, Tooltip, CircularProgress } from "@mui/material";
 import { Plus, Info } from "lucide-react";
 import Link from "next/link";
-import { ProjectSearch } from "@/components/project-search";
+
+const ProjectSearch = dynamic(() => import("@/components/project-search").then(mod => ({ default: mod.ProjectSearch })));
 
 export default function ProjectsPageClient() {
   const [projects, setProjects] = useState<any[]>([]);
