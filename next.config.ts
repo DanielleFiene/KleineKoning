@@ -8,6 +8,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Optimize bundle size by excluding unused MUI modules
+  experimental: {
+    optimizePackageImports: ['@mui/material', '@mui/system'],
+  },
 };
 
 export default nextConfig;

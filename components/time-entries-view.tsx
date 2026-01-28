@@ -1109,7 +1109,7 @@ export function TimeEntriesView({
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={nl}>
                 <DatePicker
                   key={weekStart} // Force re-render when weekStart changes
-                  value={getTodayDate()}
+                  value={currentWeek}
                   onChange={(newDate) => {
                     if (newDate) {
                       const monday = startOfWeek(newDate, { weekStartsOn: 1 });
