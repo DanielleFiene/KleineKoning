@@ -7,7 +7,8 @@ import { Menu as MenuIcon } from "lucide-react"
 import Box from "@mui/material/Box";
 import IconButton from "@mui/material/IconButton";
 import Drawer from "@mui/material/Drawer";
-import { useMediaQuery, useTheme } from "@mui/material/styles";
+import { useTheme } from "@mui/material/styles";
+import useMediaQuery from "@mui/material/useMediaQuery";
 
 import { useIsMobile } from "@/hooks/use-mobile"
 
