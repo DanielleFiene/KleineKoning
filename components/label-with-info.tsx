@@ -6,7 +6,7 @@
  */
 "use client";
 
-import { Box } from "@mui/material";
+import Box from "@mui/material/Box";
 import { InfoIcon } from "./info-icon";
 
 interface LabelWithInfoProps {

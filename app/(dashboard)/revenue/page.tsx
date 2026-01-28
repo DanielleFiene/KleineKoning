@@ -5,9 +5,7 @@
  * Geen server actions, MUI imports, of Supabase server client om bundle size te verkleinen
  * en Edge Runtime compatibiliteit te behouden.
  */
-import dynamic from "next/dynamic";
-
-const RevenuePageClient = dynamic(() => import("./RevenuePageClient"));
+import RevenuePageClient from "./RevenuePageClient";
 
 export const runtime = 'edge';
 

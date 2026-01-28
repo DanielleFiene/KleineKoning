@@ -9,13 +9,13 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
+import { TimeEntriesView } from "@/components/time-entries-view";
 import { startOfWeek, endOfWeek, format } from "date-fns";
 import { getCurrentWeekMonday, parseDateString } from "@/lib/utils/date";
-import { Box, CircularProgress, Typography } from "@mui/material";
-
-const TimeEntriesView = dynamic(() => import("@/components/time-entries-view").then(mod => ({ default: mod.TimeEntriesView })));
+import Box from "@mui/material/Box";
+import CircularProgress from "@mui/material/CircularProgress";
+import Typography from "@mui/material/Typography";
 
 export default function TimePageClient() {
   const searchParams = useSearchParams();

@@ -5,10 +5,10 @@
  * Server component met Edge Runtime support.
  */
 import { getClient } from "@/app/actions/clients";
-import dynamic from "next/dynamic";
-import { Container, Box, Typography } from "@mui/material";
-
-const ClientForm = dynamic(() => import("@/components/client-form").then(mod => ({ default: mod.ClientForm })));
+import Container from "@mui/material/Container";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import { ClientForm } from "@/components/client-form";
 
 export const runtime = 'edge';
 

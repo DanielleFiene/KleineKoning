@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-dialog',
       '@radix-ui/react-select',
       '@radix-ui/react-tooltip',
+      '@supabase/supabase-js',
     ],
   },
   // Compiler optimizations

@@ -8,20 +8,18 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogActions,
-  DialogTitle,
-  TextField,
-  Button,
-  Box,
-  Paper,
-  Typography,
-  FormControlLabel,
-  Checkbox,
-  Chip,
-} from "@mui/material";
+import Dialog from "@mui/material/Dialog";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import DialogTitle from "@mui/material/DialogTitle";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Typography from "@mui/material/Typography";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
+import Chip from "@mui/material/Chip";
 import { useToast } from "@/components/toast-provider";
 
 interface TimerSession {

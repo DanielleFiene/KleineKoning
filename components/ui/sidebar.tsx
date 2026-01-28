@@ -4,7 +4,10 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { Menu as MenuIcon } from "lucide-react"
-import { Box, IconButton, Drawer, useMediaQuery, useTheme } from "@mui/material"
+import Box from "@mui/material/Box";
+import IconButton from "@mui/material/IconButton";
+import Drawer from "@mui/material/Drawer";
+import { useMediaQuery, useTheme } from "@mui/material/styles";
 
 import { useIsMobile } from "@/hooks/use-mobile"
 

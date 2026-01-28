@@ -6,7 +6,9 @@
  */
 "use client";
 
-import { Tooltip, IconButton, Box } from "@mui/material";
+import Tooltip from "@mui/material/Tooltip";
+import IconButton from "@mui/material/IconButton";
+import Box from "@mui/material/Box";
 import { Info } from "lucide-react";
 
 interface InfoIconProps {

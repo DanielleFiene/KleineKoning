@@ -8,13 +8,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { createClient } from "@/lib/supabase/client";
-import { Container, Box, Typography, Button, Paper, Tooltip, CircularProgress } from "@mui/material";
+import Container from "@mui/material/Container";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import Paper from "@mui/material/Paper";
+import Tooltip from "@mui/material/Tooltip";
+import CircularProgress from "@mui/material/CircularProgress";
 import { Plus, Info } from "lucide-react";
 import Link from "next/link";
-
-const ClientSearch = dynamic(() => import("@/components/client-search").then(mod => ({ default: mod.ClientSearch })));
+import { ClientSearch } from "@/components/client-search";
 
 export default function ClientsPageClient() {
   const [clients, setClients] = useState<any[]>([]);

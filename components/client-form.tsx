@@ -9,19 +9,17 @@
 
 import { useFormStatus } from "react-dom";
 import { useState } from "react";
-import {
-  Paper,
-  Box,
-  Typography,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Button,
-  CircularProgress,
-  Link,
-} from "@mui/material";
+import Paper from "@mui/material/Paper";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import TextField from "@mui/material/TextField";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import Button from "@mui/material/Button";
+import CircularProgress from "@mui/material/CircularProgress";
+import Link from "@mui/material/Link";
 import { InfoIcon } from "@/components/info-icon";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/toast-provider";

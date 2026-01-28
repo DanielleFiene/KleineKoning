@@ -7,7 +7,10 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback } from "react";
-import { Snackbar, Alert, AlertColor, IconButton } from "@mui/material";
+import Snackbar from "@mui/material/Snackbar";
+import Alert from "@mui/material/Alert";
+import type { AlertColor } from "@mui/material";
+import IconButton from "@mui/material/IconButton";
 import { X as CloseIcon } from "lucide-react";
 
 interface ToastContextType {

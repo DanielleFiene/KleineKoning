@@ -14,7 +14,11 @@ import {
   SidebarMenuItem,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import { Box, Typography, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemIcon from "@mui/material/ListItemIcon";
+import ListItemText from "@mui/material/ListItemText";
 import { Clock, Download, Users, Briefcase, Euro } from "lucide-react";
 
 const menuItems = [

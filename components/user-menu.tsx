@@ -7,7 +7,10 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { Button, IconButton, Tooltip, Box } from "@mui/material";
+import Button from "@mui/material/Button";
+import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import Box from "@mui/material/Box";
 import { LogOut, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
 

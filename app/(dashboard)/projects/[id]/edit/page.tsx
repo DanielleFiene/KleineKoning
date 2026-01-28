@@ -6,10 +6,10 @@
  */
 import { getProject, getProjects } from "@/app/actions/projects";
 import { getClients } from "@/app/actions/clients";
-import dynamic from "next/dynamic";
-import { Container, Box, Typography } from "@mui/material";
-
-const ProjectForm = dynamic(() => import("@/components/project-form").then(mod => ({ default: mod.ProjectForm })));
+import Container from "@mui/material/Container";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import { ProjectForm } from "@/components/project-form";
 
 export const runtime = 'edge';
 

@@ -4,10 +4,10 @@
  * Nieuwe client aanmaken pagina. Toont formulier voor het toevoegen van een nieuwe klant.
  * Server component.
  */
-import dynamic from "next/dynamic";
-import { Container, Box, Typography } from "@mui/material";
-
-const ClientForm = dynamic(() => import("@/components/client-form").then(mod => ({ default: mod.ClientForm })));
+import Container from "@mui/material/Container";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import { ClientForm } from "@/components/client-form";
 
 export default function NewClientPage() {
   return (

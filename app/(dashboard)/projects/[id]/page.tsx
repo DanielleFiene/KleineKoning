@@ -5,13 +5,11 @@
  * Server component met Edge Runtime support.
  */
 import { getProject } from "@/app/actions/projects";
-import {
-  Container,
-  Box,
-  Typography,
-  Button,
-  Paper,
-} from "@mui/material";
+import Container from "@mui/material/Container";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
+import Paper from "@mui/material/Paper";
 import { Edit } from "lucide-react";
 import Link from "next/link";
 import { InfoIcon } from "@/components/info-icon";
