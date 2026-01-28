@@ -8,9 +8,24 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  // Optimize bundle size by excluding unused MUI modules
+  // Optimize bundle size by excluding unused modules
   experimental: {
-    optimizePackageImports: ['@mui/material', '@mui/system'],
+    optimizePackageImports: [
+      '@mui/material', 
+      '@mui/system',
+      '@mui/x-date-pickers',
+      'lucide-react',
+      'date-fns',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tooltip',
+    ],
+  },
+  // Compiler optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
   },
 };
 
