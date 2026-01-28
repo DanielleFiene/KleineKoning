@@ -42,7 +42,7 @@ import TextField from "@mui/material/TextField";
 import Tooltip from "@mui/material/Tooltip";
 import Checkbox from "@mui/material/Checkbox";
 import { ChevronLeft, ChevronRight, Plus, Trash2, Copy, Search, Edit, Calendar, Info } from "lucide-react";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { DatePickerWrapper } from "@/components/date-picker-wrapper";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
@@ -1105,7 +1105,7 @@ export function TimeEntriesView({
                 <InfoIcon title="Selecteer een datum in de kalender om naar die week te navigeren. De kalender toont altijd vandaag, maar je kunt naar elke week navigeren." size="small" />
               </Box>
               <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={nl}>
-                <DatePicker
+                <DatePickerWrapper
                   key={weekStart} // Force re-render when weekStart changes
                   value={currentWeek}
                   onChange={(newDate) => {

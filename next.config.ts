@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-select',
       '@radix-ui/react-tooltip',
       '@supabase/supabase-js',
+      '@emotion/react',
+      '@emotion/styled',
     ],
   },
   // Compiler optimizations
@@ -28,6 +30,8 @@ const nextConfig: NextConfig = {
       exclude: ['error', 'warn'],
     } : false,
   },
+  // Optimize for edge runtime
+  reactStrictMode: true,
 };
 
 export default nextConfig;

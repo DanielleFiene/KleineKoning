@@ -38,7 +38,7 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Alert from "@mui/material/Alert";
 import { Copy, Download, Mail, Plus, Trash2 } from "lucide-react";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { DatePickerWrapper } from "@/components/date-picker-wrapper";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { useToast } from "@/components/toast-provider";
@@ -404,10 +404,10 @@ export function ExportsView({
                         </Typography>
                         <InfoIcon title="Startdatum van de periode. Deze datum is inclusief (entries van deze datum worden meegenomen)." size="small" />
                       </Box>
-                      <DatePicker
+                      <DatePickerWrapper
                         label="Van"
                         value={customStart}
-                        onChange={(newValue) => setCustomStart(newValue)}
+                        onChange={(newValue: Date | null) => setCustomStart(newValue)}
                         slotProps={{
                           textField: {
                             sx: { maxWidth: 200 },
@@ -423,10 +423,10 @@ export function ExportsView({
                         </Typography>
                         <InfoIcon title="Einddatum van de periode. Deze datum is inclusief (entries van deze datum worden meegenomen). Let op: als je meerdere periodes exporteert die overlappen, kunnen dezelfde entries in meerdere exports voorkomen." size="small" />
                       </Box>
-                      <DatePicker
+                      <DatePickerWrapper
                         label="Tot"
                         value={customEnd}
-                        onChange={(newValue) => setCustomEnd(newValue)}
+                        onChange={(newValue: Date | null) => setCustomEnd(newValue)}
                         minDate={customStart || undefined}
                         slotProps={{
                           textField: {
