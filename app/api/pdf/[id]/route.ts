@@ -2,15 +2,16 @@
  * app/api/pdf/[id]/route.ts
  * 
  * API route voor het serveren van PDF urenstaten. Haalt PDF op uit Supabase Storage of
- * genereert deze on-the-fly als deze niet bestaat. Controleert authenticatie en autorisatie.
+ * genereert deze on-the-fly via Cloudflare Worker als deze niet bestaat. Controleert authenticatie en autorisatie.
  * Redirect naar expired page als signed URL verlopen is.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getStatement } from "@/app/actions/statements";
-import { generateStatementPDF } from "@/lib/utils/pdf-generator";
 
 export const runtime = 'edge';
+
+const PDF_WORKER_URL = process.env.NEXT_PUBLIC_PDF_WORKER_URL || '';
 
 export async function GET(
   request: NextRequest,
@@ -94,15 +95,35 @@ export async function GET(
       duration_minutes: line.duration_minutes,
     }));
 
-    // Generate PDF directly using pdf-lib (Edge Runtime compatible)
-    const pdfBytes = await generateStatementPDF(
-      statement.clients?.name || "Onbekend",
-      statement.statement_number,
-      statement.period_start,
-      statement.period_end,
-      pdfEntries,
-      totalMinutes
-    );
+    // Generate PDF via Cloudflare Worker
+    if (!PDF_WORKER_URL) {
+      return NextResponse.json(
+        { error: "PDF Worker URL niet geconfigureerd. Voeg NEXT_PUBLIC_PDF_WORKER_URL toe aan je environment variables." },
+        { status: 500 }
+      );
+    }
+
+    const workerResponse = await fetch(`${PDF_WORKER_URL}/statement`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        clientName: statement.clients?.name || "Onbekend",
+        statementNumber: statement.statement_number,
+        periodStart: statement.period_start,
+        periodEnd: statement.period_end,
+        entries: pdfEntries,
+        totalMinutes,
+      }),
+    });
+
+    if (!workerResponse.ok) {
+      const errorText = await workerResponse.text();
+      throw new Error(`PDF Worker error: ${workerResponse.status} - ${errorText}`);
+    }
+
+    const pdfBytes = new Uint8Array(await workerResponse.arrayBuffer());
 
     // Convert to ArrayBuffer for NextResponse
     const arrayBuffer = pdfBytes.buffer instanceof ArrayBuffer

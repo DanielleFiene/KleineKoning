@@ -1,15 +1,15 @@
 /**
  * app/api/generate-pdf/route.ts
  * 
- * API route voor het genereren van PDF urenstaten. Gebruikt pdf-lib voor Edge Runtime
- * compatibele PDF generatie. Uploadt PDFs naar Supabase Storage. Valt terug op base64
- * data URLs als storage bucket niet beschikbaar is. Verwerkt grote bestanden via chunked encoding.
+ * API route voor het genereren van PDF urenstaten. Roept Cloudflare Worker aan voor PDF generatie.
+ * Uploadt PDFs naar Supabase Storage. Valt terug op base64 data URLs als storage bucket niet beschikbaar is.
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { generateStatementPDF } from "@/lib/utils/pdf-generator";
 
 export const runtime = 'edge';
+
+const PDF_WORKER_URL = process.env.NEXT_PUBLIC_PDF_WORKER_URL || '';
 
 /**
  * Convert Uint8Array to base64 string in chunks to avoid "Maximum call stack size exceeded" error
@@ -63,15 +63,32 @@ export async function POST(request: NextRequest) {
       duration_minutes: entry.duration_minutes,
     }));
 
-    // Generate PDF directly using pdf-lib (Edge Runtime compatible)
-    const pdfBytes = await generateStatementPDF(
-      clientName,
-      statementNumber,
-      periodStart,
-      periodEnd,
-      pdfEntries,
-      totalMinutes
-    );
+    // Generate PDF via Cloudflare Worker
+    if (!PDF_WORKER_URL) {
+      throw new Error("PDF Worker URL niet geconfigureerd. Voeg NEXT_PUBLIC_PDF_WORKER_URL toe aan je environment variables.");
+    }
+
+    const workerResponse = await fetch(`${PDF_WORKER_URL}/statement`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        clientName,
+        statementNumber,
+        periodStart,
+        periodEnd,
+        entries: pdfEntries,
+        totalMinutes,
+      }),
+    });
+
+    if (!workerResponse.ok) {
+      const errorText = await workerResponse.text();
+      throw new Error(`PDF Worker error: ${workerResponse.status} - ${errorText}`);
+    }
+
+    const pdfBytes = new Uint8Array(await workerResponse.arrayBuffer());
 
     // Upload to Supabase Storage
     const supabase = await createClient();

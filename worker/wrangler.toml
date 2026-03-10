@@ -1,0 +1,9 @@
+name = "kleinekoning-pdf-generator"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[env.production]
+name = "kleinekoning-pdf-generator"
+
+[env.preview]
+name = "kleinekoning-pdf-generator-preview"
