@@ -177,7 +177,17 @@ export default function PrivacyPage() {
 
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                  8. Wijzigingen
+                  8. Klacht bij toezichthouder
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  U heeft het recht om een klacht in te dienen bij de bevoegde toezichthouder. Voor verwerking onder Tsjechisch recht is dat de Úřad pro ochranu osobních údajů (ÚOOÚ), Pplk. Sochora 27, 170 00 Praha 7,{" "}
+                  <Link href="https://www.uoou.cz" target="_blank" rel="noopener noreferrer" color="primary">www.uoou.cz</Link>.
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                  9. Wijzigingen
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
                   Wij behouden ons het recht voor om deze privacyverklaring aan te passen. Wijzigingen worden op deze pagina gepubliceerd. Het is raadzaam deze pagina regelmatig te raadplegen.

@@ -10,6 +10,7 @@ import Container from "@mui/material/Container";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
+import Link from "@mui/material/Link";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { useState, useEffect } from "react";
@@ -191,10 +192,20 @@ export default function AlgemeneVoorwaardenPage() {
 
               <Box>
                 <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                  10. Toepasselijk recht
+                  10. Klachten
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  Op deze voorwaarden is Nederlands recht van toepassing. Geschillen zullen worden voorgelegd aan de bevoegde rechter in Nederland.
+                  Heeft u een klacht over de dienst? Neem dan eerst contact met ons op via{" "}
+                  <Link href="mailto:info@dfdigital.eu" color="primary">info@dfdigital.eu</Link>. Voor klachten over de verwerking van persoonsgegevens verwijzen wij naar onze privacyverklaring en uw recht om een klacht in te dienen bij de toezichthouder (in Tsjechië: Úřad pro ochranu osobních údajů).
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                  11. Toepasselijk recht
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Op deze voorwaarden is Tsjechisch recht van toepassing. Geschillen zullen worden voorgelegd aan de bevoegde rechter in Tsjechië.
                 </Typography>
               </Box>
 

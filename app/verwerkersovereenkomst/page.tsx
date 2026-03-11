@@ -198,6 +198,15 @@ export default function VerwerkersovereenkomstPage() {
                 </Typography>
               </Box>
 
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                  Toepasselijk recht
+                </Typography>
+                <Typography variant="body1" color="text.secondary">
+                  Op deze verwerkersovereenkomst is Tsjechisch recht van toepassing.
+                </Typography>
+              </Box>
+
               <Box sx={{ mt: 2, p: 2, bgcolor: "action.hover", borderRadius: 1 }}>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Laatste update:</strong> {new Date().toLocaleDateString("nl-NL", { year: "numeric", month: "long", day: "numeric" })}
