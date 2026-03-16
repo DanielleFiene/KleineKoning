@@ -1,9 +1,9 @@
-name = "kleinekoning-pdf-generator"
+name = "white-pine-eb0b"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
 [env.production]
-name = "kleinekoning-pdf-generator"
+name = "white-pine-eb0b"
 
 [env.preview]
-name = "kleinekoning-pdf-generator-preview"
+name = "white-pine-eb0b-preview"
