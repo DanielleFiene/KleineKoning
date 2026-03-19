@@ -6,6 +6,7 @@
  */
 import type { Metadata } from "next";
 import "./globals.css";
+import { ChunkLoadRecovery } from "./chunk-load-recovery";
 
 export const metadata: Metadata = {
   title: "Kleine Koning - Tijdregistratie",
@@ -40,7 +41,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nl">
-      <body>{children}</body>
+      <body>
+        <ChunkLoadRecovery />
+        {children}
+      </body>
     </html>
   );
 }
